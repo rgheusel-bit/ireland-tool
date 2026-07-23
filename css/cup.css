@@ -1,0 +1,203 @@
+/* ============================================================
+   Ireland Trip 2026 — Cup & Championship Tracker
+   Reuses the trip planner's root palette/fonts (--green/--brass/
+   --rust/--ink/--serif/--sans etc. from index.html) so this reads
+   as one product. Everything stays scoped under #cup-tracker.
+   ============================================================ */
+#cup-tracker{
+  --claret:var(--rust); --claret-2:var(--rust);
+  --gorse:var(--brass); --gorse-2:var(--brass-2);
+  --hair:var(--line-soft); --stone:var(--surface-2); --muted:var(--ink-soft);
+  --display:var(--serif); --body:var(--sans);
+
+  box-sizing:border-box; font-family:var(--body); color:var(--ink);
+  line-height:1.5; padding-top:4px;
+}
+#cup-tracker *{box-sizing:border-box;}
+#cup-tracker :focus-visible{outline:2.5px solid var(--gorse); outline-offset:2px; border-radius:4px;}
+
+/* ---------- placeholder-data banner ---------- */
+#cup-tracker .cup-note{
+  background:var(--brass-wash); border:1px solid var(--brass-line); border-radius:var(--radius-sm);
+  padding:11px 14px; font-size:12.5px; color:#7a5a1a; margin-bottom:16px; line-height:1.5;
+}
+
+/* ---------- masthead ---------- */
+#cup-tracker .mast{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 20px; margin-bottom:18px;}
+#cup-tracker .mast .eyebrow{font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--gorse-2); font-weight:600;}
+#cup-tracker h1{font-family:var(--display); font-weight:600; font-size:clamp(1.5rem,4vw,2rem); line-height:1.05; margin:.12em 0 0; letter-spacing:-.01em; color:var(--ink);}
+#cup-tracker h1 em{font-style:italic; color:var(--green-2);}
+#cup-tracker .mast .sub{color:var(--muted); font-size:.85rem; max-width:34ch;}
+
+/* ---------- scoreboard (signature) ---------- */
+#cup-tracker .board{
+  background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:clamp(16px,3vw,26px); margin-bottom:20px;
+}
+#cup-tracker .team-id{display:flex; align-items:center; gap:9px; min-width:0;}
+#cup-tracker .team-id.right{justify-content:flex-end; text-align:right;}
+#cup-tracker .dot{width:13px; height:13px; border-radius:50%; flex:0 0 auto; box-shadow:inset 0 0 0 2px rgba(255,255,255,.55);}
+#cup-tracker .dot.a{background:var(--green);} #cup-tracker .dot.b{background:var(--claret);}
+#cup-tracker .team-name{font-weight:700; font-size:clamp(.82rem,2.4vw,1.05rem); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--display);}
+#cup-tracker .score{font-family:var(--display); font-weight:700; font-size:clamp(2.6rem,10vw,4.2rem); line-height:.9; font-variant-numeric:tabular-nums;}
+#cup-tracker .score.a{color:var(--green);} #cup-tracker .score.b{color:var(--claret-2);}
+#cup-tracker .vs{font-family:var(--display); font-style:italic; color:var(--muted); font-size:1.1rem; padding:0 4px;}
+#cup-tracker .scores-row{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; margin-top:2px;}
+#cup-tracker .scores-row .a{text-align:left;} #cup-tracker .scores-row .b{text-align:right;}
+
+/* tug-of-war bar */
+#cup-tracker .tug-wrap{margin-top:18px;}
+#cup-tracker .tug{position:relative; height:24px; border-radius:999px; background:var(--stone); border:1px solid var(--line); overflow:hidden;}
+#cup-tracker .tug .fill{position:absolute; top:0; bottom:0; transition:width .5s cubic-bezier(.22,.61,.36,1);}
+#cup-tracker .tug .fill.a{left:0; background:linear-gradient(90deg,var(--green),var(--green-3));}
+#cup-tracker .tug .fill.b{right:0; background:linear-gradient(270deg,var(--claret-2),var(--claret));}
+#cup-tracker .tug .clinch{position:absolute; top:-5px; bottom:-5px; width:2px; background:var(--gorse); opacity:.85;}
+#cup-tracker .tug .clinch::after{content:'9½'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--gorse-2); letter-spacing:.04em;}
+#cup-tracker .tug-scale{display:flex; justify-content:space-between; margin-top:19px; font-size:11px; color:var(--muted); letter-spacing:.02em;}
+#cup-tracker .status{margin-top:12px; text-align:center; font-size:13px; color:var(--muted);}
+#cup-tracker .status b{color:var(--ink); font-weight:600;}
+#cup-tracker .status .won{display:inline-block; font-family:var(--display); font-weight:700; letter-spacing:.01em; padding:2px 12px; border-radius:999px; color:#fff;}
+#cup-tracker .status .won.a{background:var(--green);} #cup-tracker .status .won.b{background:var(--claret-2);} #cup-tracker .status .won.halved{background:var(--gorse-2);}
+
+/* ---------- sub-tabs (Ryder Cup / Championship / Handicaps / Live) ---------- */
+#cup-tracker .cup-tabs{display:flex; gap:4px; background:var(--stone); padding:4px; border-radius:999px; width:fit-content; max-width:100%; overflow-x:auto; margin:0 auto 20px; border:1px solid var(--line);}
+#cup-tracker .cup-tab{appearance:none; border:0; background:transparent; font:inherit; font-weight:600; font-size:12.5px; color:var(--muted); padding:8px 16px; border-radius:999px; cursor:pointer; transition:.18s; white-space:nowrap;}
+#cup-tracker .cup-tab[aria-selected="true"]{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(34,38,42,.12);}
+#cup-tracker .cup-panel{display:none;} #cup-tracker .cup-panel.active{display:block; animation:cupfade .3s ease;}
+@keyframes cupfade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+/* ---------- round cards (cup) ---------- */
+#cup-tracker .rounds{display:grid; gap:14px;}
+#cup-tracker .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden;}
+#cup-tracker .card > header{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:15px 18px 12px; border-bottom:1px solid var(--hair); flex-wrap:wrap;}
+#cup-tracker .card .gname{font-family:var(--display); font-weight:600; font-size:1.1rem;}
+#cup-tracker .card .gname .no{color:var(--gorse-2); font-size:12px; font-weight:700; letter-spacing:.06em; margin-right:8px; vertical-align:1px;}
+#cup-tracker .card .rsub{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums;}
+#cup-tracker .card .rsub .pts{font-weight:700; color:var(--ink);}
+#cup-tracker .items{padding:6px 10px 12px;}
+#cup-tracker .item{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 8px; border-radius:var(--radius-sm); flex-wrap:wrap;}
+#cup-tracker .item + .item{border-top:1px solid var(--hair);}
+#cup-tracker .item .lbl{font-size:13.5px; min-width:0;}
+#cup-tracker .item .worth{font-size:10.5px; color:var(--muted); margin-left:7px; letter-spacing:.04em;}
+
+/* segmented A / halve / B */
+#cup-tracker .seg{display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:#fff; flex:0 0 auto;}
+#cup-tracker .seg button{appearance:none; border:0; background:transparent; font:inherit; font-size:12px; font-weight:600; color:var(--muted); padding:6px 13px; cursor:pointer; transition:.15s; line-height:1.2;}
+#cup-tracker .seg button + button{border-left:1px solid var(--line);}
+#cup-tracker .seg button:hover{background:var(--stone);}
+#cup-tracker .seg button.on[data-s="A"]{background:var(--green); color:#fff;}
+#cup-tracker .seg button.on[data-s="T"]{background:var(--gorse); color:#fff;}
+#cup-tracker .seg button.on[data-s="B"]{background:var(--claret); color:#fff;}
+
+/* ---------- stableford ---------- */
+#cup-tracker .sf-note{font-size:12.5px; color:var(--muted); background:var(--stone); border:1px solid var(--line); border-left:3px solid var(--gorse); border-radius:var(--radius-sm); padding:11px 14px; margin-bottom:18px;}
+#cup-tracker .standings{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:8px 8px 10px; margin-bottom:20px;}
+#cup-tracker .standings h3, #cup-tracker .grid-wrap h3{font-family:var(--display); font-weight:600; font-size:1.02rem; margin:8px 10px 10px;}
+#cup-tracker .stand-row{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; padding:9px 12px; border-radius:var(--radius-sm);}
+#cup-tracker .stand-row + .stand-row{border-top:1px solid var(--hair);}
+#cup-tracker .stand-row .rank{font-family:var(--display); font-weight:700; font-size:1.05rem; color:var(--muted); width:1.4em; text-align:center;}
+#cup-tracker .stand-row.lead .rank{color:var(--gorse-2);}
+#cup-tracker .stand-row .who{font-weight:600; display:flex; align-items:center; gap:8px; min-width:0;}
+#cup-tracker .stand-row .who .dot{width:9px; height:9px;}
+#cup-tracker .stand-row .who .seat-tag{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 5px;}
+#cup-tracker .stand-row .tot{font-family:var(--display); font-weight:700; font-size:1.2rem; font-variant-numeric:tabular-nums;}
+#cup-tracker .stand-row .tot small{font-family:var(--body); font-weight:500; font-size:10px; color:var(--muted); letter-spacing:.06em; display:block; text-align:right; margin-top:-2px;}
+
+#cup-tracker .grid-wrap{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:8px 4px 12px; overflow-x:auto;}
+#cup-tracker table.sf{border-collapse:collapse; width:100%; min-width:520px; font-variant-numeric:tabular-nums;}
+#cup-tracker table.sf th, #cup-tracker table.sf td{padding:7px 8px; text-align:center; border-bottom:1px solid var(--hair);}
+#cup-tracker table.sf thead th{font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line);}
+#cup-tracker table.sf td.name, #cup-tracker table.sf th.name{text-align:left; font-weight:600; white-space:nowrap; position:sticky; left:0; background:var(--surface);}
+#cup-tracker table.sf td.name .dot{width:8px; height:8px; display:inline-block; margin-right:6px; vertical-align:middle;}
+#cup-tracker table.sf input{width:44px; border:1px solid var(--line); border-radius:7px; padding:5px 4px; font:inherit; font-size:13px; text-align:center; background:#fff; color:var(--ink);}
+#cup-tracker table.sf input:focus{border-color:var(--gorse); outline:none;}
+#cup-tracker table.sf td .pp{display:block; font-size:10px; color:var(--gorse-2); font-weight:700; margin-top:2px; height:.8em;}
+#cup-tracker table.sf td.tot{font-weight:700; font-family:var(--display); font-size:1rem;}
+#cup-tracker table.sf td.auto{background:var(--green-wash);}
+#cup-tracker table.sf td .src{display:block; font-size:9px; color:var(--green-2); font-weight:700; margin-top:2px; text-transform:uppercase; letter-spacing:.04em;}
+
+/* ---------- setup ---------- */
+#cup-tracker details.setup{margin-bottom:20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); overflow:hidden;}
+#cup-tracker details.setup summary{cursor:pointer; padding:13px 18px; font-weight:600; font-size:13.5px; list-style:none; display:flex; align-items:center; justify-content:space-between;}
+#cup-tracker details.setup summary::-webkit-details-marker{display:none;}
+#cup-tracker details.setup summary .chev{transition:.2s; color:var(--muted);}
+#cup-tracker details.setup[open] summary .chev{transform:rotate(180deg);}
+#cup-tracker .setup-body{padding:4px 18px 18px; border-top:1px solid var(--hair);}
+#cup-tracker .team-names{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0 18px;}
+#cup-tracker .field label{display:block; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:4px;}
+#cup-tracker input.txt, #cup-tracker select.txt{width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; font-size:13.5px; background:#fff; color:var(--ink);}
+#cup-tracker input.txt:focus, #cup-tracker select.txt:focus{outline:none; border-color:var(--green-3);}
+#cup-tracker .players-set{display:grid; gap:8px;}
+#cup-tracker .pset{display:grid; grid-template-columns:1fr 110px; gap:8px; align-items:center;}
+#cup-tracker .actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+#cup-tracker button.btn{appearance:none; font:inherit; font-size:12.5px; font-weight:600; padding:8px 15px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; transition:.15s;}
+#cup-tracker button.btn:hover{background:var(--stone);}
+#cup-tracker button.btn.danger{color:var(--claret-2); border-color:#e2c9cb;}
+#cup-tracker button.btn.danger:hover{background:#f7ecec;}
+#cup-tracker button.btn.primary{background:var(--green); color:#fff; border-color:var(--green);}
+#cup-tracker button.btn.primary:hover{background:var(--green-2);}
+
+#cup-tracker .foot{margin-top:24px; text-align:center; font-size:11px; color:var(--muted);}
+
+/* ---------- handicaps & tees panel ---------- */
+#cup-tracker .hcp-table-wrap{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:6px; overflow-x:auto; margin-bottom:18px;}
+#cup-tracker table.hcp{border-collapse:collapse; width:100%; min-width:640px; font-variant-numeric:tabular-nums;}
+#cup-tracker table.hcp th, #cup-tracker table.hcp td{padding:8px 9px; text-align:center; border-bottom:1px solid var(--hair); vertical-align:middle;}
+#cup-tracker table.hcp thead th{font-size:10.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line);}
+#cup-tracker table.hcp td.name{text-align:left; font-weight:600; white-space:nowrap;}
+#cup-tracker table.hcp input[type=number]{width:56px; border:1px solid var(--line); border-radius:7px; padding:5px 4px; font:inherit; font-size:13px; text-align:center; background:#fff; color:var(--ink);}
+#cup-tracker table.hcp select{border:1px solid var(--line); border-radius:7px; padding:5px 6px; font:inherit; font-size:12.5px; background:#fff; color:var(--ink);}
+#cup-tracker table.hcp input:focus, #cup-tracker table.hcp select:focus{outline:none; border-color:var(--green-3);}
+#cup-tracker .hcp-round-block{margin-bottom:16px;}
+#cup-tracker .hcp-round-title{font-family:var(--display); font-weight:600; font-size:14.5px; color:var(--green); margin:0 2px 8px;}
+#cup-tracker .hcp-ch{font-weight:700; color:var(--green); font-family:var(--display);}
+#cup-tracker .hcp-ch.minus{color:var(--claret-2);}
+
+/* ---------- live scoring ---------- */
+#cup-tracker .live-round-picker{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
+#cup-tracker .live-round-btn{appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:999px; padding:7px 14px; font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+#cup-tracker .live-round-btn.active{background:var(--green); border-color:var(--green); color:#fff;}
+#cup-tracker .live-group-picker{display:flex; gap:8px; margin-bottom:16px;}
+#cup-tracker .live-group-btn{flex:1; appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:var(--radius-sm); padding:10px; font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; text-align:left;}
+#cup-tracker .live-group-btn.active{border-color:var(--green); background:var(--green-wash); color:var(--ink);}
+#cup-tracker .live-group-btn small{display:block; font-weight:500; color:var(--ink-faint); margin-top:2px;}
+#cup-tracker .hole-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:14px 16px; margin-bottom:16px;}
+#cup-tracker .hole-nav-btn{appearance:none; border:1px solid var(--line); background:#fff; border-radius:var(--radius-sm); width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink-soft); flex-shrink:0;}
+#cup-tracker .hole-nav-btn:hover{border-color:var(--green-3); color:var(--green);}
+#cup-tracker .hole-nav-mid{text-align:center; flex:1;}
+#cup-tracker .hole-nav-num{font-family:var(--display); font-weight:700; font-size:1.6rem; color:var(--ink); line-height:1;}
+#cup-tracker .hole-nav-meta{font-size:11.5px; color:var(--ink-soft); margin-top:3px;}
+#cup-tracker .hole-nav-jump{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:16px;}
+#cup-tracker .hole-jump-btn{appearance:none; border:1px solid var(--line); background:var(--surface); border-radius:7px; width:30px; height:30px; font-size:11.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
+#cup-tracker .hole-jump-btn.done{background:var(--green-wash); border-color:var(--green-line); color:var(--green);}
+#cup-tracker .hole-jump-btn.current{border-color:var(--green); box-shadow:0 0 0 2px var(--green-line);}
+#cup-tracker .live-score-rows{display:flex; flex-direction:column; gap:8px; margin-bottom:18px;}
+#cup-tracker .live-score-row{display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px;}
+#cup-tracker .lsr-name{flex:1; min-width:0;}
+#cup-tracker .lsr-name .n{font-weight:700; font-size:13.5px; color:var(--ink);}
+#cup-tracker .lsr-name .stroke-dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--brass-2); margin-left:6px; vertical-align:middle;}
+#cup-tracker .lsr-name .meta{font-size:11px; color:var(--ink-faint); margin-top:1px;}
+#cup-tracker .lsr-stepper{display:flex; align-items:center; gap:8px;}
+#cup-tracker .lsr-stepper button{appearance:none; border:1px solid var(--line); background:#fff; border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer; color:var(--ink-soft);}
+#cup-tracker .lsr-stepper button:hover{border-color:var(--green-3); color:var(--green);}
+#cup-tracker .lsr-gross{font-family:var(--display); font-weight:700; font-size:1.3rem; width:1.5em; text-align:center;}
+#cup-tracker .lsr-result{width:64px; text-align:right; font-size:11px; color:var(--ink-soft); flex-shrink:0;}
+#cup-tracker .lsr-result b{display:block; font-size:13px; color:var(--ink);}
+#cup-tracker .live-leaderboard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:10px 8px;}
+#cup-tracker .live-leaderboard h3{font-family:var(--display); font-weight:600; font-size:1rem; margin:6px 10px 8px;}
+#cup-tracker .llb-row{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:10px; padding:8px 12px;}
+#cup-tracker .llb-row + .llb-row{border-top:1px solid var(--hair);}
+#cup-tracker .llb-row .rank{font-family:var(--display); font-weight:700; color:var(--muted); width:1.2em; text-align:center;}
+#cup-tracker .llb-row .thru{font-size:10.5px; color:var(--ink-faint);}
+#cup-tracker .llb-row .pts{font-family:var(--display); font-weight:700; color:var(--green);}
+
+@media (max-width:560px){
+  #cup-tracker .item{align-items:flex-start;}
+  #cup-tracker .team-names{grid-template-columns:1fr;}
+  #cup-tracker .pset{grid-template-columns:1fr 84px;}
+  #cup-tracker .live-group-picker{flex-direction:column;}
+}
+@media (prefers-reduced-motion:reduce){
+  #cup-tracker *{animation:none !important; transition:none !important;}
+}

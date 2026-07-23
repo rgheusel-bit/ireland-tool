@@ -1,0 +1,2427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ireland Trip Planning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/cup.css">
+<script>
+  // ── FIREBASE CONFIG ──────────────────────────────────────────
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyBsmVLV8GjgP_CdkNGy50dLwRZh2bkqY2Q",
+    authDomain:        "ireland-planner-8a5a1.firebaseapp.com",
+    databaseURL:       "https://ireland-planner-8a5a1-default-rtdb.firebaseio.com",
+    projectId:         "ireland-planner-8a5a1",
+    storageBucket:     "ireland-planner-8a5a1.firebasestorage.app",
+    messagingSenderId: "78453105464",
+    appId:             "1:78453105464:web:16357654af1fed991057cd"
+  };
+  // ─────────────────────────────────────────────────────────────
+</script>
+<style>
+:root {
+  --paper:      #f3efe6;
+  --surface:    #fffdf8;
+  --surface-2:  #ece6d9;
+  --ink:        #1d211b;
+  --ink-soft:   #585d52;
+  --ink-faint:  #8b8f83;
+  --line:       #e2dccd;
+  --line-soft:  #efe9dc;
+  --green:      #1f4d33;
+  --green-2:    #2f6a47;
+  --green-3:    #4b8a64;
+  --green-wash: #e6efe6;
+  --green-line: #c7ddc9;
+  --brass:      #9a7a2f;
+  --brass-2:    #b9962f;
+  --brass-wash: #f4ecd6;
+  --brass-line: #e3d3a0;
+  --sand:       #e7e0cf;
+  --rust:       #a8492b;
+  --shadow:     0 1px 2px rgba(31,49,33,.05), 0 8px 24px rgba(31,49,33,.06);
+  --shadow-sm:  0 1px 2px rgba(31,49,33,.06);
+  --radius:     16px;
+  --radius-sm:  10px;
+  --radius-xs:  7px;
+  --sans: 'Archivo', system-ui, -apple-system, sans-serif;
+  --serif: 'Spectral', Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
+}
+
+/* ====== HEADER ====== */
+.header {
+  background:
+    radial-gradient(120% 140% at 12% -20%, #2c6a45 0%, transparent 55%),
+    linear-gradient(165deg, #15331f 0%, #1f4d33 60%, #173a26 100%);
+  color: #f3efe6;
+  padding: 26px 20px 22px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.header::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0 2px, transparent 2px 9px);
+  pointer-events: none;
+}
+.header-kicker {
+  font-size: 11px; letter-spacing: 3.5px; text-transform: uppercase;
+  color: var(--brass-2); font-weight: 600; opacity: .95;
+}
+.header h1 {
+  font-family: var(--serif);
+  font-size: 30px; font-weight: 600; letter-spacing: .2px;
+  margin: 4px 0 6px; line-height: 1.05;
+}
+.header .tagline {
+  font-size: 12.5px; opacity: .82; font-weight: 400;
+  letter-spacing: .2px; max-width: 560px; margin: 0 auto;
+}
+.header .rule {
+  width: 42px; height: 2px; background: var(--brass-2);
+  margin: 12px auto 0; opacity: .85; border-radius: 2px;
+}
+
+/* ====== WHO AM I BAR ====== */
+.who-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 9px 16px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  max-width: 1120px; margin: 0 auto;
+}
+.who-label { font-size: 11px; color: var(--ink-faint); white-space: nowrap; text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+.who-name { font-weight: 700; color: var(--green); font-size: 15px; font-family: var(--serif); }
+.who-bar select {
+  border: 1px solid var(--line); border-radius: var(--radius-xs);
+  padding: 6px 11px; font-size: 13px; font-family: var(--sans);
+  background: var(--surface); color: var(--ink); cursor: pointer;
+  flex: 1; min-width: 120px; max-width: 220px; margin-left: auto;
+}
+.who-bar select:focus { outline: none; border-color: var(--green-3); }
+
+/* ====== SCHEDULE FILTER ====== */
+.schedule-filter-bar { display: flex; align-items: center; gap: 10px; margin: 0 2px 14px; }
+.sf-label { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+.schedule-filter-bar select {
+  border: 1px solid var(--line); border-radius: var(--radius-xs);
+  padding: 7px 12px; font-size: 13.5px; font-family: var(--sans); font-weight: 600;
+  background: var(--surface); color: var(--ink); cursor: pointer;
+}
+.schedule-filter-bar select:focus { outline: none; border-color: var(--green-3); }
+
+/* ====== TAB NAV ====== */
+.tabs {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex; overflow-x: auto; scrollbar-width: none;
+  position: sticky; top: 0; z-index: 90;
+  max-width: 1120px; margin: 0 auto;
+  padding: 0 8px;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 1; min-width: 64px; padding: 13px 10px 11px;
+  text-align: center; font-size: 12.5px; font-weight: 600;
+  color: var(--ink-faint); cursor: pointer;
+  border-bottom: 2.5px solid transparent;
+  transition: color .15s, border-color .15s;
+  user-select: none; white-space: nowrap; letter-spacing: .2px;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab:hover { color: var(--ink-soft); }
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* ====== MAIN ====== */
+.main { padding: 18px 16px 40px; max-width: 1120px; margin: 0 auto; }
+.tab-pane { display: none; animation: fade .25s ease; }
+.tab-pane.active { display: block; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.section-eyebrow {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.4px;
+  color: var(--ink-faint); font-weight: 600; margin: 4px 2px 12px;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.section-eyebrow .se-line { flex: 1; height: 1px; background: var(--line); }
+
+/* ====== GLANCE MATRIX (everyone at once) ====== */
+.glance {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 16px 14px;
+  margin-bottom: 26px;
+}
+.glance-title {
+  font-family: var(--serif); font-size: 19px; font-weight: 600;
+  color: var(--ink); margin-bottom: 2px;
+}
+.glance-sub { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 14px; }
+
+/* desktop table */
+.glance-scroll { overflow-x: auto; scrollbar-width: thin; }
+.glance-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 640px; }
+.glance-table th, .glance-table td { padding: 0; }
+.gt-corner {
+  position: sticky; left: 0; z-index: 3; background: var(--surface);
+  text-align: left; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 700; padding: 0 10px 9px 4px !important;
+  vertical-align: bottom; min-width: 132px;
+}
+.gt-person {
+  vertical-align: bottom; padding-bottom: 9px !important; text-align: center;
+}
+.gt-person .gtp-emoji { font-size: 13px; line-height: 1; display: block; }
+.gt-person .gtp-name { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
+.gt-person.gtp-me .gtp-name { color: var(--brass); font-weight: 700; }
+.gt-day {
+  position: sticky; left: 0; z-index: 2; background: var(--surface);
+  text-align: left; padding: 7px 12px 7px 4px !important;
+  border-top: 1px solid var(--line-soft); vertical-align: middle; min-width: 132px;
+}
+.gt-day .gtd-date { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--brass); font-weight: 700; }
+.gt-day .gtd-course { font-size: 12.5px; font-weight: 600; color: var(--ink); font-family: var(--serif); line-height: 1.15; margin-top: 1px; }
+.gt-day .gtd-free { font-size: 11px; color: var(--ink-faint); font-weight: 500; }
+.gc {
+  border-top: 1px solid var(--line-soft);
+  text-align: center; vertical-align: middle; height: 40px;
+}
+.gc-inner {
+  width: 28px; height: 28px; margin: 0 auto; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.gc-golf .gc-inner { background: var(--green); color: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.gc-free .gc-inner { background: var(--sand); color: var(--ink-faint); font-size: 10px; }
+.gc-none .gc-inner { background: repeating-linear-gradient(45deg, var(--line-soft) 0 4px, transparent 4px 8px); color: var(--ink-faint); }
+.gc-me { box-shadow: inset 3px 0 0 var(--brass-2), inset -3px 0 0 var(--brass-2); }
+tr.gt-me-row .gt-day { box-shadow: inset 3px 0 0 var(--brass-2); }
+
+/* mobile per-day board */
+.glance-mobile { display: none; }
+.gm-day { padding: 11px 2px; border-top: 1px solid var(--line-soft); }
+.gm-day:first-child { border-top: none; }
+.gm-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.gm-date { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--brass); font-weight: 700; white-space: nowrap; }
+.gm-course { font-family: var(--serif); font-size: 14px; font-weight: 600; color: var(--ink); }
+.gm-tee { font-size: 11px; color: var(--ink-faint); margin-left: auto; white-space: nowrap; }
+.gm-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.gm-chip {
+  font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.gm-golf { background: var(--green); color: #fff; }
+.gm-free { background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
+.gm-me { box-shadow: 0 0 0 2px var(--brass-2); }
+.gm-divider { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-faint); font-weight: 600; margin: 0 2px; }
+
+.glance-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; margin-top: 13px; padding-top: 12px;
+  border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--ink-soft);
+}
+.glance-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.lg-golf { background: var(--green); }
+.lg-free { background: var(--sand); }
+.lg-none { background: repeating-linear-gradient(45deg, var(--line) 0 3px, transparent 3px 6px); border: 1px solid var(--line); }
+
+/* ====== DAY CARDS ====== */
+.day-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.day-card.open { box-shadow: var(--shadow); }
+.day-head {
+  padding: 15px 17px; cursor: pointer; display: flex; align-items: center;
+  gap: 14px; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.day-head:hover { background: #fcfaf3; }
+.day-num {
+  font-family: var(--serif); font-size: 13px; font-weight: 700; color: #fff;
+  background: var(--green); width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  flex-direction: column; line-height: 1;
+}
+.day-num small { font-size: 7px; font-weight: 600; letter-spacing: .5px; opacity: .8; margin-top: 1px; }
+.day-head-main { flex: 1; min-width: 0; }
+.day-meta { font-size: 10px; opacity: .9; text-transform: uppercase; letter-spacing: .7px; color: var(--brass); font-weight: 700; }
+.day-name { font-size: 16.5px; font-weight: 600; font-family: var(--serif); color: var(--ink); margin-top: 1px; line-height: 1.15; }
+.day-loc { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.day-head-tags { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.day-tag {
+  font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+}
+.day-tag.golf { background: var(--green-wash); color: var(--green); border: 1px solid var(--green-line); }
+.day-tag.flight { background: var(--brass-wash); color: var(--brass); border: 1px solid var(--brass-line); }
+.day-tag.rest { background: var(--surface-2); color: var(--ink-soft); }
+.day-chevron { font-size: 22px; color: var(--ink-faint); transition: transform .22s; flex-shrink: 0; line-height: 1; }
+.day-card.open .day-chevron { transform: rotate(90deg); }
+.day-body { display: none; padding: 4px 17px 18px; }
+.day-card.open .day-body { display: block; }
+
+/* ====== SECTION ====== */
+.sec { margin-bottom: 16px; }
+.sec:last-child { margin-bottom: 0; }
+.sec-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--ink-faint); margin-bottom: 8px;
+}
+
+/* ====== FLIGHT STRIP (on day cards) ====== */
+.flight-strip {
+  background: var(--brass-wash); border: 1px solid var(--brass-line);
+  border-radius: var(--radius-sm); padding: 11px 13px; display: flex; gap: 11px;
+  align-items: flex-start; margin-bottom: 8px;
+}
+.flight-strip:last-child { margin-bottom: 0; }
+.fs-ico {
+  width: 26px; height: 26px; border-radius: 7px; background: var(--brass); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+}
+.fs-body { flex: 1; min-width: 0; }
+.fs-who { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.fs-who .fs-time { color: var(--brass); font-weight: 700; }
+.fs-route { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.fs-meta { font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
+.fs-note { font-size: 11.5px; color: var(--rust); margin-top: 4px; font-weight: 500; }
+
+/* ====== HOTEL STRIP ====== */
+.hotel-strip {
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  padding: 11px 14px; display: flex; gap: 11px; align-items: center;
+}
+.hotel-strip .ico {
+  width: 26px; height: 26px; border-radius: 7px; background: var(--green-3); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; font-weight: 700;
+}
+.hotel-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.hotel-area { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+/* ====== GOLF STRIP ====== */
+.golf-strip {
+  background: var(--green-wash); border-radius: var(--radius-sm);
+  padding: 13px 15px; border: 1px solid var(--green-line);
+}
+.golf-course { font-size: 16px; font-weight: 700; color: var(--green); font-family: var(--serif); }
+.golf-rank { font-size: 11px; font-weight: 600; color: var(--brass); background: var(--brass-wash); border: 1px solid var(--brass-line); border-radius: 5px; padding: 2px 8px; margin-top: 5px; display: inline-block; }
+.golf-tee { font-size: 12.5px; color: var(--ink-soft); margin-top: 7px; }
+.golf-tee strong { color: var(--ink); }
+.golf-protip { font-size: 12px; color: var(--green); background: rgba(255,255,255,.55); border-left: 3px solid var(--green-3); padding: 7px 10px; margin-top: 9px; border-radius: 0 6px 6px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.chip {
+  border-radius: 20px; padding: 3px 10px; font-size: 11.5px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.chip-golf { background: var(--green); color: #fff; }
+.chip-nongolf { background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
+.chip-me { background: var(--brass); color: #fff; }
+.golf-notes { font-size: 12px; color: var(--ink-soft); margin-top: 10px; border-top: 1px solid var(--green-line); padding-top: 9px; line-height: 1.5; }
+
+/* ====== ACTIVITY ITEMS ====== */
+.activity-list { display: flex; flex-direction: column; gap: 7px; }
+.activity-item {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 11px 13px; display: flex; align-items: center; gap: 11px;
+  background: var(--surface); transition: border-color .15s;
+}
+.activity-item:hover { border-color: var(--green-line); }
+.act-content { flex: 1; min-width: 0; }
+.act-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.act-notes { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; line-height: 1.45; }
+.act-time { font-size: 10px; font-weight: 700; color: var(--brass); margin-top: 4px; text-transform: uppercase; letter-spacing: .4px; }
+.act-interested { font-size: 11px; color: var(--green-2); margin-top: 4px; font-weight: 600; }
+.interest-btn {
+  height: 30px; padding: 0 12px; border-radius: 15px; border: 1.5px solid var(--line);
+  background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; white-space: nowrap; transition: all .15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; color: var(--ink-soft);
+}
+.interest-btn:hover { border-color: var(--green-3); }
+.interest-btn.on { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* ====== VAN ITEMS ====== */
+.van-list { display: flex; flex-direction: column; gap: 7px; }
+.van-item {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 11px 13px; display: flex; gap: 11px; align-items: flex-start;
+}
+.van-time-badge {
+  background: var(--green); color: #fff; border-radius: var(--radius-xs);
+  padding: 3px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+}
+.van-desc { font-size: 13px; color: var(--ink); }
+.van-who { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+
+/* ====== ADD BTN ====== */
+.add-btn {
+  width: 100%; background: none; border: 1.5px dashed var(--line); border-radius: var(--radius-sm);
+  padding: 9px; cursor: pointer; color: var(--ink-faint); font-size: 12px; font-family: inherit;
+  transition: all .15s; margin-top: 7px;
+}
+.add-btn:hover { border-color: var(--brass); color: var(--brass); }
+
+/* ====== NOTES ====== */
+.day-note {
+  background: var(--brass-wash); border-left: 3px solid var(--brass-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 13px;
+  font-size: 12px; color: var(--ink-soft); line-height: 1.55;
+}
+
+/* ====== DAY ROSTER (who's doing what) ====== */
+.roster { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; background: var(--surface); }
+.roster-row { display: flex; gap: 12px; padding: 10px 13px; border-top: 1px solid var(--line-soft); align-items: flex-start; }
+.roster-row:first-child { border-top: none; }
+.roster-name {
+  width: 96px; flex-shrink: 0; font-weight: 700; font-size: 13px; color: var(--ink);
+  display: flex; align-items: center; gap: 8px; padding-top: 1px;
+}
+.rn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--sand); display: inline-block; margin-right: 7px; vertical-align: middle; }
+.rp-names { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.rp-name { font-size: 11px; font-weight: 600; background: var(--surface-2); border-radius: 12px; padding: 1.5px 9px; color: var(--ink-soft); }
+.rp-name.is-me { background: var(--brass); color: #fff; }
+.kind-golf  .rn-dot { background: var(--green); }
+.kind-active .rn-dot { background: var(--brass-2); }
+.kind-travel .rn-dot { background: var(--rust); }
+.kind-away  .rn-dot { background: repeating-linear-gradient(45deg, var(--line) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--line); }
+.kind-meal .rn-dot { background: var(--sand); }
+.kind-meal .rp-primary { color: var(--ink-soft); }
+.roster-plan { flex: 1; min-width: 0; }
+.rp-primary { font-size: 13px; color: var(--ink); line-height: 1.4; }
+.kind-golf .rp-primary { font-weight: 600; color: var(--green); }
+.kind-travel .rp-primary { font-weight: 600; color: var(--rust); }
+.kind-free .rp-primary, .kind-away .rp-primary { color: var(--ink-faint); font-style: italic; }
+.rp-secondary { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; line-height: 1.45; }
+.roster-row.me { background: var(--brass-wash); }
+.roster-row.me .roster-name { color: var(--brass); }
+.roster-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 9px 2px 0; font-size: 11px; color: var(--ink-soft); }
+.roster-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.rl-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* ====== FLIGHTS TAB ====== */
+.flights-intro { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; max-width: 620px; line-height: 1.55; }
+.flights-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.flights-col-head {
+  font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--green);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.flights-col-head .fch-count { font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--ink-faint); background: var(--surface-2); border-radius: 20px; padding: 2px 9px; }
+.flight-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); padding: 15px 16px; margin-bottom: 12px;
+}
+.flight-card.drive { background: var(--surface-2); }
+.fc-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fc-who { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--serif); }
+.fc-date { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--brass); white-space: nowrap; }
+.fc-route-line {
+  display: flex; align-items: center; gap: 8px; margin: 12px 0 10px;
+}
+.fc-node { text-align: center; }
+.fc-node .fc-code { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--green); line-height: 1; }
+.fc-node .fc-time { font-size: 10.5px; color: var(--ink-soft); margin-top: 3px; white-space: nowrap; }
+.fc-path { flex: 1; height: 0; border-top: 1.5px dashed var(--green-line); position: relative; }
+.fc-path::after { content: "✈"; position: absolute; right: -2px; top: -9px; font-size: 11px; color: var(--green-3); }
+.fc-seg { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
+.fc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fc-tag { font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 5px; background: var(--surface-2); color: var(--ink-soft); }
+.fc-tag.cabin { background: var(--green-wash); color: var(--green); border: 1px solid var(--green-line); }
+.fc-tag.conf { background: var(--brass-wash); color: var(--brass); border: 1px solid var(--brass-line); font-family: var(--serif); letter-spacing: .5px; }
+.fc-note { font-size: 11.5px; color: var(--rust); margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line-soft); font-weight: 500; line-height: 1.45; }
+.fc-del { background: none; border: none; cursor: pointer; color: var(--ink-faint); font-size: 14px; padding: 2px 4px; border-radius: 4px; line-height: 1; }
+.fc-del:hover { color: var(--rust); background: #fdecea; }
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 460px) { .form-grid2 { grid-template-columns: 1fr; gap: 0; } }
+
+/* ====== PEOPLE TAB ====== */
+.people-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 9px; margin-bottom: 22px;
+}
+.person-card {
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 13px 10px; text-align: center; cursor: pointer; transition: all .15s; -webkit-tap-highlight-color: transparent;
+}
+.person-card:hover { border-color: var(--green-line); }
+.person-card.selected { border-color: var(--green); background: var(--green-wash); }
+.person-card .p-emoji { font-size: 22px; }
+.person-card .p-name { font-size: 13.5px; font-weight: 700; margin-top: 4px; font-family: var(--serif); color: var(--ink); }
+.person-card .p-role { font-size: 10px; color: var(--ink-faint); margin-top: 2px; text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
+.person-schedule { display: none; }
+.person-schedule.active { display: block; }
+.person-day-row { border-bottom: 1px solid var(--line-soft); padding: 12px 0; display: flex; gap: 12px; }
+.person-day-row:last-child { border-bottom: none; }
+.pdr-date { font-size: 11px; font-weight: 700; color: var(--brass); min-width: 78px; text-transform: uppercase; letter-spacing: .3px; }
+.pdr-content { flex: 1; font-size: 13px; }
+.pdr-hotel { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+.pdr-golf { color: var(--green); font-weight: 700; }
+.pdr-activities { color: var(--ink-soft); margin-top: 3px; }
+
+/* ====== CONTACTS ====== */
+.contacts-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 16px; margin-top: 16px; }
+.contacts-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+.contacts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 18px; }
+.contact-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 6px 2px; border-bottom: 1px solid var(--line-soft); }
+.contact-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.contact-row a { font-size: 12.5px; color: var(--green-2); text-decoration: none; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.contact-row a:hover { text-decoration: underline; }
+.contact-host { grid-column: 1 / -1; padding-top: 10px; font-size: 12px; color: var(--ink-soft); border-bottom: none; line-height: 1.5; }
+
+/* ====== VAN TAB ====== */
+.van-overview { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 16px; }
+.van-day-section { border-bottom: 1px solid var(--line); }
+.van-day-section:last-child { border-bottom: none; }
+.van-day-head { background: var(--surface-2); padding: 11px 15px; font-size: 13px; font-weight: 700; color: var(--green); font-family: var(--serif); }
+.van-day-body { padding: 11px 15px; }
+.van-slot { display: flex; gap: 11px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.van-slot:last-child { border-bottom: none; }
+.van-slot-time { background: var(--green); color: #fff; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; min-width: 74px; text-align: center; flex-shrink: 0; }
+.van-slot-time.golf { background: var(--brass); }
+.van-slot-info { font-size: 12.5px; color: var(--ink); }
+.van-slot-who { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+
+.user-van-requests { margin-top: 16px; }
+.user-van-head { font-size: 16px; font-weight: 600; margin-bottom: 11px; font-family: var(--serif); color: var(--ink); }
+.van-req-form { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow-sm); padding: 16px; }
+.form-row { margin-bottom: 13px; }
+.form-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--ink-faint); letter-spacing: .5px; display: block; margin-bottom: 6px; }
+.form-row select, .form-row input[type=text], .form-row textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: var(--radius-xs);
+  padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink); background: var(--surface);
+}
+.form-row select:focus, .form-row input:focus, .form-row textarea:focus { outline: none; border-color: var(--green-3); }
+.form-row textarea { height: 70px; resize: vertical; }
+.submit-btn { background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); padding: 12px 20px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; font-family: inherit; transition: background .15s; }
+.submit-btn:hover { background: var(--green-2); }
+
+.req-list { margin-top: 14px; }
+.req-item { background: var(--brass-wash); border: 1px solid var(--brass-line); border-radius: var(--radius-sm); padding: 11px 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+.req-info .req-day { font-size: 11px; font-weight: 700; color: var(--brass); text-transform: uppercase; letter-spacing: .3px; }
+.req-info .req-details { font-size: 13px; color: var(--ink); margin-top: 2px; }
+.req-info .req-notes { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+.req-delete { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--ink-faint); padding: 0 0 0 8px; }
+
+/* ====== MEALS TAB ====== */
+.meals-day { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow-sm); margin-bottom: 12px; overflow: hidden; }
+.meals-day-head { background: var(--green); color: #fff; padding: 11px 15px; font-size: 13px; font-weight: 600; font-family: var(--serif); display: flex; justify-content: space-between; align-items: center; }
+.meals-day-head span:last-child { font-family: var(--sans); }
+.meals-day-body { padding: 0; }
+.meal-row { padding: 13px 15px; border-bottom: 1px solid var(--line-soft); display: flex; gap: 11px; align-items: flex-start; }
+.meal-row:last-child { border-bottom: none; }
+.meal-icon { font-size: 18px; flex-shrink: 0; padding-top: 1px; }
+.meal-content { flex: 1; }
+.meal-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--brass); }
+.meal-suggestion { font-size: 13px; color: var(--ink-soft); margin-top: 3px; white-space: pre-wrap; }
+.meal-notes-input { width: 100%; border: 1px solid var(--line); border-radius: var(--radius-xs); padding: 8px 11px; font-size: 13px; font-family: inherit; margin-top: 8px; color: var(--ink); background: var(--surface); }
+.meal-notes-input:focus { outline: none; border-color: var(--green-3); }
+
+/* ====== ALERTS/BADGES ====== */
+.badge { display: inline-block; border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: 700; margin-left: 5px; }
+.badge-must { background: var(--rust); color: #fff; }
+.badge-info { background: var(--green); color: #fff; }
+.alert-box {
+  background: var(--brass-wash); border: 1px solid var(--brass-line); border-radius: var(--radius-sm);
+  padding: 11px 14px; font-size: 12.5px; color: #7a5a1a; margin-bottom: 14px; display: flex; gap: 8px; line-height: 1.5;
+}
+
+/* ====== SHARE ====== */
+.share-card { background: var(--surface-2); border-radius: var(--radius); padding: 17px; margin-top: 22px; border: 1px solid var(--line); }
+.share-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; font-family: var(--serif); color: var(--ink); }
+.share-card p { font-size: 12px; color: var(--ink-soft); margin-bottom: 13px; line-height: 1.5; }
+.share-btn-row { display: flex; gap: 8px; }
+.share-btn { flex: 1; background: var(--green); color: #fff; border: none; border-radius: var(--radius-xs); padding: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center; }
+.share-btn.outline { background: var(--surface); color: var(--green); border: 1.5px solid var(--green); }
+
+/* ====== SYNC STATUS ====== */
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #bbb; display: inline-block; vertical-align: middle; flex-shrink: 0; transition: background .3s; }
+.sync-dot.connected  { background: var(--green-3); }
+.sync-dot.connecting { background: var(--brass-2); animation: syncpulse 1.2s infinite; }
+.sync-dot.offline    { background: var(--rust); }
+@keyframes syncpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+#sync-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px);
+  background: rgba(20,40,28,.94); color: #fff; padding: 9px 18px; border-radius: 22px;
+  font-size: 13px; font-weight: 500; transition: transform .28s ease, opacity .28s ease;
+  opacity: 0; pointer-events: none; z-index: 9999;
+}
+#sync-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ====== INLINE EDITING ====== */
+.editable { cursor: text; border-radius: 3px; outline: none; transition: background .12s; white-space: pre-wrap; word-break: break-word; display: inline; }
+.editable:hover { background: rgba(47,106,71,.09); }
+.editable:focus { background: #fff; box-shadow: 0 0 0 2px rgba(47,106,71,.35); padding: 1px 3px; margin: -1px -3px; }
+.editable-block { cursor: text; border-radius: 3px; outline: none; transition: background .12s; white-space: pre-wrap; word-break: break-word; display: block; min-height: 1em; }
+.editable-block:hover { background: rgba(47,106,71,.07); }
+.editable-block:focus { background: #fff; box-shadow: 0 0 0 2px rgba(47,106,71,.35); padding: 4px 6px; margin: -4px -6px; }
+.editable:empty::before, .editable-block:empty::before { content: attr(data-placeholder); color: var(--ink-faint); font-style: italic; font-weight: 400; pointer-events: none; }
+.delete-btn { background: none; border: none; cursor: pointer; color: var(--rust); opacity: 0; font-size: 13px; padding: 3px 6px; border-radius: 4px; transition: opacity .15s; flex-shrink: 0; }
+.activity-item:hover .delete-btn, .van-item:hover .delete-btn { opacity: .55; }
+.activity-item:hover .delete-btn:hover, .van-item:hover .delete-btn:hover { opacity: 1; background: #fdecea; }
+.add-row-btn { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; background: none; border: 1.5px dashed var(--green-line); color: var(--green); padding: 7px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; margin-top: 6px; transition: background .12s; }
+.add-row-btn:hover { background: var(--green-wash); }
+
+@media (hover: none) {
+  .delete-btn { opacity: 0.45; }
+  .delete-btn:active { opacity: 1; background: #fdecea; }
+  .editable:hover, .editable-block:hover { background: none; }
+  .editable:focus, .editable-block:focus { background: #fff; box-shadow: 0 0 0 2px rgba(47,106,71,.35); }
+}
+
+/* ====== NAME OVERLAY ====== */
+.name-overlay { position: fixed; inset: 0; background: rgba(12,28,18,.9); display: flex; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.name-overlay.hidden { display: none; }
+.name-overlay-card { background: var(--surface); border-radius: 20px; padding: 34px 26px 28px; max-width: 430px; width: 92%; text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,.4); }
+.noc-flag { font-size: 28px; margin-bottom: 6px; }
+.noc-kicker { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--brass); font-weight: 600; }
+.noc-title { font-size: 24px; font-weight: 600; color: var(--green); line-height: 1.15; font-family: var(--serif); margin-top: 3px; }
+.noc-sub { color: var(--ink-soft); font-size: 12.5px; margin: 6px 0 22px; }
+.noc-prompt { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 14px; }
+.noc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.noc-btn { background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 11px; padding: 12px 6px 10px; cursor: pointer; transition: all .15s; text-align: center; user-select: none; }
+.noc-btn:hover { background: var(--green); border-color: var(--green); }
+.noc-btn:hover .noc-btn-name { color: #fff; }
+.noc-btn-emoji { font-size: 20px; display: block; margin-bottom: 4px; line-height: 1; }
+.noc-btn-name { font-size: 12.5px; font-weight: 600; color: var(--ink); font-family: var(--serif); }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 720px) {
+  .glance-scroll { display: none; }
+  .glance-mobile { display: block; }
+  .flights-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 460px) {
+  .main { padding: 14px 12px 36px; }
+  .header h1 { font-size: 25px; }
+  .people-grid { grid-template-columns: repeat(3, 1fr); }
+  .day-head { padding: 13px 14px; gap: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAME SELECTION OVERLAY -->
+<div id="name-overlay" class="name-overlay hidden">
+  <div class="name-overlay-card">
+    <div class="noc-flag">🇮🇪 ⛳ 🇬🇧</div>
+    <div class="noc-kicker">August 1–8, 2026</div>
+    <div class="noc-title">Ireland Trip Planning</div>
+    <div class="noc-sub">Dublin · Newcastle · Portrush</div>
+    <div class="noc-prompt">Who are you?</div>
+    <div class="noc-grid" id="noc-grid"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-kicker">August 1–8, 2026</div>
+  <h1>Ireland Trip Planning</h1>
+  <div class="tagline">Dublin · Newcastle · Portrush</div>
+  <div class="rule"></div>
+</div>
+
+<div class="who-bar">
+  <span class="who-label">Viewing as</span>
+  <span class="who-name" id="who-name">—</span>
+  <span id="sync-dot" class="sync-dot" title="Sync not configured"></span>
+  <select id="user-select" onchange="setUser(this.value)">
+    <option value="">— Select your name —</option>
+    <option value="robert">Robert</option>
+    <option value="meg">Meg</option>
+    <option value="george">George</option>
+    <option value="elizabeth">Elizabeth</option>
+    <option value="gary">Gary</option>
+    <option value="cindy">Cindy</option>
+    <option value="eric">Eric</option>
+    <option value="deedee">DeeDee</option>
+    <option value="jeff">Jeff</option>
+    <option value="paige">Paige</option>
+    <option value="phil">Phil</option>
+    <option value="kerith">Kerith</option>
+  </select>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('schedule')">Schedule</div>
+  <div class="tab" onclick="showTab('flights')">Flights</div>
+  <div class="tab" onclick="showTab('people')">People</div>
+  <div class="tab" onclick="showTab('van')">Van</div>
+  <div class="tab" onclick="showTab('cup')">Cup</div>
+</div>
+
+<div class="main">
+
+  <!-- ===== SCHEDULE TAB ===== -->
+  <div id="tab-schedule" class="tab-pane active">
+    <div class="schedule-filter-bar" id="schedule-filter-mount"></div>
+    <div class="section-eyebrow">Day by day <span class="se-line"></span></div>
+    <div id="schedule-days"></div>
+  </div>
+
+  <!-- ===== FLIGHTS TAB ===== -->
+  <div id="tab-flights" class="tab-pane">
+    <p class="flights-intro">Everyone's travel into and out of Dublin, in one place. George &amp; Elizabeth and Jeff &amp; Paige fly in Jul 28 for a pre-trip; Gary &amp; Cindy arrive Jul 31; the rest land Aug 1 (Meg on Aug 4). Robert &amp; Meg stay an extra night and fly home Aug 9.</p>
+    <div id="flights-mount"></div>
+  </div>
+
+  <!-- ===== PEOPLE TAB ===== -->
+  <div id="tab-people" class="tab-pane">
+    <div id="contacts-mount"></div>
+  </div>
+
+  <!-- ===== VAN TAB ===== -->
+  <div id="tab-van" class="tab-pane">
+    <div class="alert-box">⚠️ <span>Biggest driver day is <strong>Tuesday Aug 4</strong>: golfers to Ardglass → solo run to Dublin Airport for Meg → back to Slieve Donard → full group from Ardglass to Portrush. Saturday Aug 8 has three staggered airport runs (5:45 AM, 8 AM, noon). Coordinate extra requests with Lee.</span></div>
+    <div class="van-overview" id="van-overview"></div>
+    <div class="user-van-requests">
+      <div class="user-van-head">Add your van request</div>
+      <div class="van-req-form">
+        <div class="form-row">
+          <label class="form-label" for="req-day">Day</label>
+          <select id="req-day">
+            <option value="">Select day...</option>
+            <option value="aug1">Sat Aug 1 — Dublin / Portmarnock</option>
+            <option value="aug2">Sun Aug 2 — Portmarnock Golf + Dublin</option>
+            <option value="aug3">Mon Aug 3 — Royal County Down</option>
+            <option value="aug4">Tue Aug 4 — Ardglass</option>
+            <option value="aug5">Wed Aug 5 — Portstewart</option>
+            <option value="aug6">Thu Aug 6 — Royal Portrush</option>
+            <option value="aug7">Fri Aug 7 — Royal Dublin</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="req-time">Time Needed</label>
+          <input type="text" id="req-time" placeholder="e.g. 9:00 AM, Morning, After golf...">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="req-dest">Destination</label>
+          <input type="text" id="req-dest" placeholder="e.g. Giant's Causeway, Dublin City...">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="req-notes">Notes / Who's Coming</label>
+          <textarea id="req-notes" placeholder="Who's joining? Any special notes..."></textarea>
+        </div>
+        <button class="submit-btn" onclick="addVanRequest()">Add Van Request</button>
+      </div>
+      <div class="req-list" id="user-req-list"></div>
+    </div>
+    <div class="share-card">
+      <h3>Share this schedule</h3>
+      <p>Export your van requests and activity preferences so the group can coordinate. Share the file via email or Google Drive.</p>
+      <div class="share-btn-row">
+        <button class="share-btn" onclick="exportState()">Export my plans</button>
+        <button class="share-btn outline" onclick="importStatePrompt()">Import plans</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CUP TAB ===== -->
+  <div id="tab-cup" class="tab-pane">
+    <section id="cup-tracker" aria-label="Ireland Trip 2026 Cup &amp; Championship tracker">
+      <div class="mast">
+        <div>
+          <div class="eyebrow">Ireland · 2026 · Six rounds</div>
+          <h1>The Cup <em>&amp;</em> The Championship</h1>
+        </div>
+        <p class="sub">Log each game as it finishes. The Cup and the Stableford board both read off these entries — nothing gets scored twice.</p>
+      </div>
+
+      <div class="cup-note">⚠️ Course data (par, stroke index, rating &amp; slope) is placeholder until real scorecards are added — Course Handicaps, live net scores, and Stableford points below are illustrative only.</div>
+
+      <details class="setup">
+        <summary>Teams &amp; players <span class="chev">▾</span></summary>
+        <div class="setup-body">
+          <div class="team-names">
+            <div class="field"><label>Team A name</label><input class="txt" id="cup-teamAName" type="text"></div>
+            <div class="field"><label>Team B name</label><input class="txt" id="cup-teamBName" type="text"></div>
+          </div>
+          <div class="players-set" id="cup-playersSet"></div>
+          <div class="actions">
+            <button class="btn danger" id="cup-resetBtn" type="button">Reset everything</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="board">
+        <div class="scores-row">
+          <div class="team-id a"><span class="dot a"></span><span class="team-name" id="cup-lblA">Team A</span></div>
+          <span class="vs">v</span>
+          <div class="team-id right b"><span class="team-name" id="cup-lblB">Team B</span><span class="dot b"></span></div>
+        </div>
+        <div class="scores-row">
+          <span class="score a" id="cup-scoreA">0</span>
+          <span></span>
+          <span class="score b" id="cup-scoreB">0</span>
+        </div>
+        <div class="tug-wrap">
+          <div class="tug">
+            <div class="fill a" id="cup-fillA" style="width:0"></div>
+            <div class="fill b" id="cup-fillB" style="width:0"></div>
+            <div class="clinch" id="cup-clinchA"></div>
+          </div>
+          <div class="tug-scale"><span>0</span><span>18 points · first to 9½ wins</span><span>18</span></div>
+        </div>
+        <div class="status" id="cup-status"></div>
+      </div>
+
+      <div class="cup-tabs" role="tablist">
+        <button class="cup-tab" role="tab" id="cup-subtab-ryder" aria-selected="true">Ryder Cup</button>
+        <button class="cup-tab" role="tab" id="cup-subtab-sf" aria-selected="false">Championship</button>
+        <button class="cup-tab" role="tab" id="cup-subtab-hcp" aria-selected="false">Handicaps &amp; Tees</button>
+        <button class="cup-tab" role="tab" id="cup-subtab-live" aria-selected="false">Live Scoring</button>
+      </div>
+
+      <div class="cup-panel active" id="cup-panel-ryder">
+        <div class="rounds" id="cup-rounds"></div>
+      </div>
+
+      <div class="cup-panel" id="cup-panel-sf">
+        <p class="sf-note"><b>Keep every card complete.</b> Any hole you don't hole out — a conceded putt or a pick-up in a team game — record your <b>most likely score</b> (net double bogey as the cap) so the Stableford total stays honest. Rounds fill in automatically from Live Scoring once holes are entered; otherwise enter each round's net Stableford total by hand below.</p>
+        <div class="standings" id="cup-standings"></div>
+        <div class="grid-wrap">
+          <h3>Net Stableford by round</h3>
+          <table class="sf" id="cup-sfTable"></table>
+        </div>
+      </div>
+
+      <div class="cup-panel" id="cup-panel-hcp">
+        <div id="cup-hcp-mount"></div>
+      </div>
+
+      <div class="cup-panel" id="cup-panel-live">
+        <div id="cup-live-mount"></div>
+      </div>
+
+      <div class="foot">Scores save automatically and sync live across everyone's phones, same as the rest of the trip planner.</div>
+    </section>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ============================================================
+// TRIP DATA
+// ============================================================
+const PARTICIPANTS = [
+  { id: "george",    name: "George",    emoji: "⛳", role: "Golfer", couple: "george-elizabeth", golfsAll: true, phone: "+1 678-464-4849" },
+  { id: "elizabeth", name: "Elizabeth", emoji: "⛳", role: "Golfer (Alt)", couple: "george-elizabeth", golfsAll: false, golfDays: ["aug2","aug4","aug7"], phone: "+1 425-553-9669" },
+  { id: "gary",      name: "Gary",      emoji: "⛳", role: "Golfer (Alt)", couple: "gary-cindy",       golfsAll: false, golfDays: ["aug3","aug5","aug6"], phone: "+1 404-597-8297" },
+  { id: "cindy",     name: "Cindy",     emoji: "🌸", role: "Non-Golfer",  couple: "gary-cindy",       golfsAll: false, golfDays: [], phone: "+1 404-597-8297" },
+  { id: "eric",      name: "Eric",      emoji: "⛳", role: "Golfer",      couple: "eric-deedee",      golfsAll: true, phone: "+1 404-583-8612" },
+  { id: "deedee",    name: "DeeDee",    emoji: "🌸", role: "Non-Golfer",  couple: "eric-deedee",      golfsAll: false, golfDays: [], phone: "+1 404-583-8612" },
+  { id: "jeff",      name: "Jeff",      emoji: "⛳", role: "Golfer",      couple: "jeff-paige",       golfsAll: true, phone: "+1 253-224-4027" },
+  { id: "paige",     name: "Paige",     emoji: "🌸", role: "Non-Golfer",  couple: "jeff-paige",       golfsAll: false, golfDays: [], phone: "+1 253-223-7810" },
+  { id: "phil",      name: "Phil",      emoji: "⛳", role: "Golfer",      couple: "phil-kerith",      golfsAll: true, phone: "+1 954-410-1647" },
+  { id: "kerith",    name: "Kerith",    emoji: "🌸", role: "Non-Golfer",  couple: "phil-kerith",      golfsAll: false, golfDays: [], phone: "+1 954-410-1648" },
+  { id: "robert",    name: "Robert",    emoji: "⛳", role: "Golfer",      couple: "robert-meg",       golfsAll: true, phone: "+1 404-441-4091" },
+  { id: "meg",       name: "Meg",       emoji: "🌸", role: "Non-Golfer",  couple: "robert-meg",       golfsAll: false, golfDays: [], phone: "+1 678-662-1047" },
+];
+
+// When each person joins the group (default Aug 1)
+const ARRIVAL = { meg: "aug4" };
+
+const TRIP_INCLUSIONS = {
+  included: ["Accommodation (7 nights as listed)", "Breakfast daily at each hotel", "Green fees at all 6 courses", "12-seater luxury coach + dedicated driver for full trip", "Lunch at Portmarnock Golf Club (Aug 2)", "Lunch at Royal Dublin Golf Club (Aug 7)"],
+  notIncluded: ["Airfares", "Caddie fees (paid in cash after round)", "Golf carts/buggies (avg £/€50)", "Sightseeing tours & activities", "Lunches/dinners (except noted above)", "Drinks"],
+  driverTip: "Suggested tip: £/€20 per person per day, paid directly to driver. Driver has max 11 hours driving per day by law.",
+  contact: "Jack Sallis, Halcyon Golf Travel · jack@halcyongolftravel.com · +44 7738 617466"
+};
+
+// Flights into / out of Dublin
+const FLIGHTS = [
+  {
+    id: "ge-arr",
+    dir: "arrival", who: "George & Elizabeth", date: "Tue Jul 28", arriveLabel: "Land DUB 12:15 PM",
+    from: { code: "SEA", time: "Jul 27" }, to: { code: "DUB", time: "12:15 PM · Jul 28" },
+    segments: "Aer Lingus EI052, Seattle → Dublin. Pre-trip through Galway & Connemara before the golf trip.",
+    note: "Driving into Portmarnock Sat Aug 1, late afternoon."
+  },
+  {
+    id: "jp-arr",
+    dir: "arrival", who: "Jeff & Paige", date: "Tue Jul 28", arriveLabel: "Land DUB 12:15 PM",
+    from: { code: "SEA", time: "Jul 27" }, to: { code: "DUB", time: "12:15 PM · Jul 28" },
+    segments: "Aer Lingus EI0052, Seattle → Dublin — same flight as George & Elizabeth. Pre-trip before joining the group Aug 1.",
+    note: ""
+  },
+  {
+    id: "gc-arr",
+    dir: "arrival", who: "Gary & Cindy", date: "Fri Jul 31", arriveLabel: "Land DUB 8:45 AM",
+    from: { code: "ATL", time: "Jul 30" }, to: { code: "DUB", time: "8:45 AM · Jul 31" },
+    segments: "Delta DL0176, Atlanta → Dublin.",
+    note: "Staying at the Fitzwilliam Hotel Dublin Jul 31 night — need transport to Portmarnock on Sat Aug 1."
+  },
+  {
+    id: "robert-arr",
+    dir: "arrival", who: "Robert", date: "Sat Aug 1", arriveLabel: "Lands DUB 10:00 AM",
+    from: { code: "ATL", time: "6:11 PM · Jul 31" }, to: { code: "DUB", time: "10:00 AM · Aug 1" },
+    segments: "DL1478 ATL → DTW, then DL292 DTW 10:00 PM → DUB",
+    cabin: "Premium Select", conf: "GLSJEJ",
+    note: "Eric & DeeDee arrive on the same flight — shared coach pickup."
+  },
+  {
+    id: "ed-arr",
+    dir: "arrival", who: "Eric & DeeDee", date: "Sat Aug 1", arriveLabel: "Land DUB 10:00 AM",
+    from: { code: "ATL", time: "Jul 31" }, to: { code: "DUB", time: "10:00 AM · Aug 1" },
+    segments: "Delta DL0292 → Dublin, lands 10:00 AM — same arrival as Robert.",
+    note: ""
+  },
+  {
+    id: "pk-arr",
+    dir: "arrival", who: "Phil & Kerith", date: "Sat Aug 1", arriveLabel: "Land DUB 7:30 PM",
+    from: { code: "OSL", time: "6:10 PM · Aug 1" }, to: { code: "DUB", time: "7:30 PM · Aug 1" },
+    segments: "Scandinavian Airlines SAS4603, Oslo → Dublin.",
+    note: "Evening arrival — separate pickup from the morning group."
+  },
+  {
+    id: "meg-arr",
+    dir: "arrival", who: "Meg", date: "Tue Aug 4", arriveLabel: "Lands DUB 10:00 AM",
+    from: { code: "ATL", time: "6:30 PM · Aug 3" }, to: { code: "DUB", time: "10:00 AM · Aug 4" },
+    segments: "DL1478 ATL → DTW 8:29 PM, then DL292 DTW 9:55 PM → DUB",
+    cabin: "Delta One", conf: "GKJGRP",
+    note: "Driver collects Meg solo from DUB after dropping golfers at Ardglass, then brings her back to Slieve Donard to meet the non-golfers."
+  },
+  {
+    id: "pk-dep",
+    dir: "departure", who: "Phil & Kerith", date: "Sat Aug 8", arriveLabel: "Depart DUB 8:50 AM",
+    from: { code: "DUB", time: "8:50 AM · Aug 8" }, to: { code: "LON", time: "London" },
+    segments: "Aer Lingus EI156, Dublin → London.",
+    note: "Earliest departure — first coach run to the airport (~5:45 AM)."
+  },
+  {
+    id: "gc-dep",
+    dir: "departure", who: "Gary & Cindy", date: "Sat Aug 8", arriveLabel: "Depart DUB 11:00 AM",
+    from: { code: "DUB", time: "11:00 AM · Aug 8" }, to: { code: "ATL", time: "Atlanta" },
+    segments: "Delta DL0177, Dublin → Atlanta.",
+    note: ""
+  },
+  {
+    id: "ed-dep",
+    dir: "departure", who: "Eric & DeeDee", date: "Sat Aug 8", arriveLabel: "Depart DUB 3:00 PM",
+    from: { code: "DUB", time: "3:00 PM · Aug 8" }, to: { code: "ATL", time: "Atlanta" },
+    segments: "Delta DL0155, Dublin → Atlanta.",
+    note: ""
+  },
+  {
+    id: "sea-dep",
+    dir: "departure", who: "George & Elizabeth · Jeff & Paige", date: "Sat Aug 8", arriveLabel: "Depart DUB 3:25 PM",
+    from: { code: "DUB", time: "3:25 PM · Aug 8" }, to: { code: "SEA", time: "Seattle" },
+    segments: "Aer Lingus EI0053, Dublin → Seattle — both couples on the same flight.",
+    note: "Can share the midday coach run with Eric & DeeDee."
+  },
+  {
+    id: "rm-dep",
+    dir: "departure", who: "Robert & Meg", date: "Sun Aug 9", arriveLabel: "Depart DUB 11:00 AM",
+    from: { code: "DUB", time: "11:00 AM · Aug 9" }, to: { code: "ATL", time: "2:53 PM · Aug 9" },
+    segments: "DL177 DUB → ATL, nonstop.",
+    conf: "GLSJEJ / GKJGRP",
+    note: "Need a Dublin hotel for Sat Aug 8 night — the Halcyon package ends at Portmarnock checkout."
+  }
+];
+
+const DAYS = [
+  {
+    id: "aug1",
+    date: "Aug 1 (Sat)",
+    label: "Arrival Day",
+    location: "Dublin / Portmarnock",
+    hotel: { name: "Portmarnock Resort", area: "Co. Dublin · 4★ · Double Guest Room · Spa ✓ · ~30 min to Dublin" },
+    travel: "",
+    golf: null,
+    activities: [
+      { id: "aug1-museum", name: "National Museum of Archaeology", time: "Afternoon", notes: "^^^Must See per Rick Steves. Free, no advance booking needed. Dublin city centre.", interested: ["elizabeth"] },
+      { id: "aug1-trinity", name: "Trinity College Tour", time: "Afternoon", notes: "45 min tour. Advance booking recommended (busy season). Book at visittrinity.ie", interested: [] },
+      { id: "aug1-dublin", name: "Explore Dublin City", time: "All Day", notes: "Temple Bar, Georgian streets, St. Stephen's Green, local pubs. ~30 min from hotel.", interested: [] },
+    ],
+    van: [
+      { time: "~10:00 AM", desc: "Robert, Eric & DeeDee arrive DUB (DL292/DL0292) — coach pickup", who: "Robert, Eric, DeeDee" },
+      { time: "Midday", desc: "Collect Gary & Cindy from the Fitzwilliam Hotel, Dublin → Portmarnock", who: "Gary, Cindy" },
+      { time: "~7:30 PM", desc: "Phil & Kerith arrive DUB (SAS4603 from Oslo) — evening pickup", who: "Phil, Kerith" }
+    ],
+    meals: {
+      breakfast: "On own (travel day — breakfast not yet in hotel)"
+    },
+    dinnerOptions: [
+      { id: "aug1-dinner-resort", name: "Portmarnock Resort Restaurant", time: "Evening", notes: "On-site option — easy after a long travel day.", interested: [] },
+      { id: "aug1-dinner-dublin", name: "Group Welcome Dinner in Dublin City", time: "Evening", notes: "Reserve a table in the city instead of dining at the resort.", interested: [] }
+    ],
+    notes: "George & Elizabeth + Jeff & Paige flew in Jul 28 and join from their Galway/Connemara pre-trip, late afternoon. Meg arrives Tue Aug 4."
+  },
+  {
+    id: "aug2",
+    date: "Aug 2 (Sun)",
+    label: "Golf Day 1 — Portmarnock",
+    location: "Portmarnock → Slieve Donard",
+    hotel: { name: "Slieve Donard Resort & Spa", area: "Newcastle, Co. Down · 4★ · Spa ✓ · 1 min walk to restaurants · 2 nights" },
+    travel: "After golf, drive to Newcastle (~2 hrs). Check in Slieve Donard.",
+    golf: {
+      course: "Portmarnock Golf Club",
+      rank: "Ranked #44 Worldwide",
+      teeTime: "1:00 PM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "elizabeth"],
+      notes: "⭐ Strictly a walking course — no buggies. Mandatory forecaddie (€80 single / €110 4-ball). Lunch INCLUDED at the club.",
+      proTip: "Allow extra time to enjoy the superb lunch included at Portmarnock Golf Club! Hosted the Irish Open 19 times."
+    },
+    activities: [
+      { id: "aug2-howth",    name: "Walk at Howth Head", time: "Morning (before golf)", notes: "Scenic coastal cliff walk. ~15 min drive from hotel. Great seafood village too.", interested: ["elizabeth"] },
+      { id: "aug2-guinness", name: "Guinness Storehouse", time: "All Day", notes: "Possibly complimentary via tour — confirm with George/Lee. Let the tour guide buy tickets!", interested: [] },
+      { id: "aug2-dublin",   name: "Explore Dublin City", time: "While golfers play (1pm+)", notes: "~30 min from Portmarnock. Non-golfers have full van access all day. Grafton St, Temple Bar, etc.", interested: [] },
+      { id: "aug2-velvet",   name: "Velvet Strand Beach & Martello Tower", time: "Anytime", notes: "Beautiful beach right outside the hotel — plus the Martello tower and St. Marnock's Well nearby. No transport needed.", interested: [] },
+      { id: "aug2-malahide", name: "Malahide Castle, Gardens & Coastal Walk", time: "Morning/Afternoon", notes: "Medieval castle and gardens ~10 min away — or walk the scenic Portmarnock–Malahide coastal path.", interested: [] },
+      { id: "aug2-newbridge", name: "Newbridge House & Farm", time: "Morning/Afternoon", notes: "Georgian manor with working farm, ~15 min north in Donabate.", interested: [] },
+      { id: "aug2-trinity",  name: "Trinity College & National Museum of Archaeology", time: "Afternoon", notes: "Both in Dublin city centre — museum is free; Trinity tours best booked ahead.", interested: [] },
+    ],
+    van: [
+      { time: "All Day", desc: "Non-golfers: Van free for Dublin / Howth exploring (golf is at hotel)", who: "Non-golfers" },
+      { time: "~5:30 PM+", desc: "Full group drives to Slieve Donard, Newcastle (~2 hrs)", who: "Everyone" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Portmarnock Resort",
+      lunch: "✅ Included at Portmarnock Golf Club (golfers) · On own for non-golfers"
+    },
+    dinnerOptions: [
+      { id: "aug2-dinner-enroute", name: "Pizza Stop En Route to Newcastle", time: "~7:00 PM", notes: "Casual stop on the ~2 hr drive north.", interested: [] },
+      { id: "aug2-dinner-newcastle", name: "Dinner in Newcastle on Arrival", time: "~8:00 PM", notes: "Eat after checking in to Slieve Donard instead.", interested: [] }
+    ],
+    notes: ""
+  },
+  {
+    id: "aug3",
+    date: "Aug 3 (Mon)",
+    label: "Golf Day 2 — Royal County Down",
+    location: "Newcastle, Co. Down",
+    hotel: { name: "Slieve Donard Resort & Spa", area: "Newcastle, Co. Down · 4★ · Spa ✓" },
+    travel: "Full day in Newcastle — golfers walk to RCD from the hotel, so non-golfers keep the van all day.",
+    golf: {
+      course: "Royal County Down — Championship Course",
+      rank: "🏆 Ranked #3 in the WORLD",
+      teeTime: "3:39 PM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "gary"],
+      notes: "⭐ No buggies available. Fore-caddies required. Afternoon tee time — full morning free for activities! Hosted Irish Open 1928, 1935, 1939, 2015.",
+      proTip: "Must try: the house Transfusion cocktail at the turn!"
+    },
+    activities: [
+      { id: "aug3-tollymore",    name: "Tollymore Forest Park", time: "Morning", notes: "Only 3 miles from hotel! Game of Thrones filming location. Stunning bridges, waterfalls & forest trails. Free entry.", interested: ["elizabeth"] },
+      { id: "aug3-slieve-hike",  name: "Hike Slieve Donard", time: "Morning", notes: "Northern Ireland's highest peak. Start at Donard Park (0.5 miles from hotel). ~3-5 hr round trip.", interested: [] },
+      { id: "aug3-horse-riding", name: "Horse Riding in the Mournes", time: "Morning", notes: "Mourne Mountain Trekking Centre — call ahead to book.", interested: [] },
+      { id: "aug3-belfast",      name: "Day Trip to Belfast", time: "All Day", notes: "~1 hr drive from Newcastle. Titanic Quarter, Cathedral Quarter, murals. Some group members keen.", interested: [] },
+      { id: "aug3-newcastle",    name: "Newcastle Town & Beach", time: "All Day", notes: "Charming seaside town right outside the hotel. Shops, cafés, beach walk.", interested: [] },
+      { id: "aug3-murlough",     name: "Murlough National Nature Reserve", time: "Morning/Afternoon", notes: "Boardwalk through 6,000-year-old dunes to a huge beach, with views back to the Mournes. ~5 min drive.", interested: [] },
+      { id: "aug3-castlewellan", name: "Castlewellan Forest Park", time: "Morning/Afternoon", notes: "Lake, castle and the Peace Maze — one of the world's largest hedge mazes. ~15 min drive.", interested: [] },
+      { id: "aug3-granite",      name: "The Granite Trail & Dundrum Castle", time: "Morning/Afternoon", notes: "Heritage walking trail up the slopes above Newcastle; Dundrum's Norman castle ruins are 10 min up the coast.", interested: [] },
+    ],
+    van: [
+      { time: "Morning",    desc: "Available for morning activities (Tollymore, Belfast, hiking...)", who: "Non-golfers" },
+      { time: "~3:15 PM",   desc: "Golfers WALK to Royal County Down from the hotel — no van needed (adjacent to Slieve Donard)", who: "Golfers" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Slieve Donard Resort"
+    },
+    dinnerOptions: [
+      { id: "aug3-dinner-early", name: "Percy French, Newcastle — Early Seating", time: "6:30 PM", notes: "For non-golfers, or anyone not playing RCD this afternoon.", interested: [] },
+      { id: "aug3-dinner-late", name: "Percy French, Newcastle — Late Seating", time: "8:45 PM", notes: "For golfers, after Royal County Down.", interested: [] }
+    ],
+    notes: "Royal County Down is the #3 course IN THE WORLD."
+  },
+  {
+    id: "aug4",
+    date: "Aug 4 (Tue)",
+    label: "Golf Day 3 — Ardglass",
+    location: "Newcastle → Portrush",
+    hotel: { name: "Portrush Adelphi", area: "67-71 Main Street, Portrush · 4★ · No Spa · Within area for restaurants · 2 nights" },
+    travel: "Check out Slieve Donard by ~10:15am. Once golf finishes, the FULL GROUP departs straight from Ardglass to Portrush (~2 hrs) — see van timeline.",
+    golf: {
+      course: "Ardglass Golf Club",
+      rank: "Ranked #8 in Northern Ireland",
+      teeTime: "11:10 AM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "elizabeth"],
+      notes: "Morning golf on stunning Co. Down coastline. Buggies available (£35). Caddies: £70 single / £120 double bag.",
+      proTip: "Ardglass Castle — the oldest inhabited castle in Ireland — sits at the 1st tee."
+    },
+    activities: [
+      { id: "aug4-meg-arrival", name: "✈️ Meg Arrives Dublin Airport", time: "10:00 AM", notes: "DL1478+DL292 via Detroit (Delta One). Conf# GKJGRP. Driver collects Meg solo after dropping golfers at Ardglass — pickup ~1:00PM after customs, back to Slieve Donard ~3:00PM.", interested: ["meg"] },
+      { id: "aug4-castles",     name: "Ardglass Castles & Ardtole Church", time: "During golf", notes: "King's, Cowd and Jordan's castles cluster around the harbour village — plus the clifftop Ardtole Church ruin. Ride along at golfer drop-off and explore on foot.", interested: [] },
+      { id: "aug4-castleward",  name: "Castle Ward", time: "During golf", notes: "18th-century estate on Strangford Lough (Game of Thrones' Winterfell), ~25 min from Ardglass.", interested: [] },
+      { id: "aug4-railway",     name: "Downpatrick & County Down Railway", time: "During golf", notes: "Heritage steam railway in Downpatrick, ~20 min from Ardglass — St. Patrick's grave is here too.", interested: [] },
+      { id: "aug4-portrush",    name: "Explore Portrush on Arrival", time: "Evening", notes: "Great coastal town. East & West Strand beaches, Ramore restaurant complex, seafront walks.", interested: [] },
+    ],
+    van: [
+      { time: "~10:15 AM", desc: "Depart Slieve Donard — drop golfers at Ardglass Golf Club (11:10 tee)", who: "Golfers (+ non-golfers who want Ardglass/Downpatrick)" },
+      { time: "~11:15 AM", desc: "Driver goes SOLO to Dublin Airport for Meg — non-golfers stay in Newcastle or Ardglass area", who: "Driver only" },
+      { time: "~1:00 PM",  desc: "Collect Meg at DUB (lands 10:00AM — allow time for customs/bags), drive back north", who: "Driver + Meg" },
+      { time: "~3:00 PM",  desc: "Meg arrives Slieve Donard — van collects non-golfers in Newcastle", who: "Meg + non-golfers" },
+      { time: "~4:00 PM",  desc: "Van to Ardglass — FULL GROUP departs straight to Portrush once golfers finish (~2 hrs)", who: "Everyone" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Slieve Donard Resort"
+    },
+    dinnerOptions: [
+      { id: "aug4-dinner-ramore", name: "Ramore Restaurant Complex, Portrush", time: "Evening", notes: "Wine Bar, Coast, or Harbour Bar — local favourite on arrival night.", interested: [] }
+    ],
+    notes: "Driver's longest day of the trip — confirm timings with Lee."
+  },
+  {
+    id: "aug5",
+    date: "Aug 5 (Wed)",
+    label: "Golf Day 4 — Portstewart",
+    location: "Portrush, Northern Ireland",
+    hotel: { name: "Portrush Adelphi", area: "Portrush, Northern Ireland · 4★" },
+    travel: "Day in Portrush/Portstewart area. Portstewart is 4 miles west on the coast.",
+    golf: {
+      course: "Portstewart Golf Club — Strand Course",
+      rank: "Ranked #3 in Northern Ireland · Hosted 2017 Irish Open",
+      teeTime: "11:10 AM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "gary"],
+      notes: "Non-golfers: RIDE WITH THE VAN to Portstewart! Great town to explore and hike back from. Caddies available (advance booking required).",
+      proTip: "Portstewart has two other courses (The Riverside & The Old) for anyone wanting extra golf."
+    },
+    activities: [
+      { id: "aug5-portstewart-town",  name: "Explore Portstewart Town", time: "Morning (ride with van!)", notes: "Cute shops, restaurants, local art, seafront. Ride with van then explore freely.", interested: ["elizabeth"] },
+      { id: "aug5-coastal-hike",      name: "Portstewart → Portrush Coastal Hike", time: "Morning/Afternoon", notes: "3.2 miles of beautiful coastal trail. Elizabeth's recommended route on All Trails! Easy to moderate.", interested: ["elizabeth"] },
+      { id: "aug5-bushmills-hike",    name: "Continue Hiking to Bushmills", time: "Full Day (early start)", notes: "11 miles total from Portstewart. Stunning Causeway Coast. Need early start — arrange pickup from Bushmills.", interested: [] },
+      { id: "aug5-bushmills-distill", name: "Old Bushmills Distillery", time: "Afternoon", notes: "World's oldest licensed whiskey distillery. Tours available. 10 min from Portrush.", interested: [] },
+      { id: "aug5-whiterocks",        name: "White Rocks Beach & East/West Strands", time: "Anytime", notes: "Portrush's dramatic limestone-cliff beach plus the two town strands — all walkable or minutes away.", interested: [] },
+      { id: "aug5-flowerfield",       name: "Flowerfield Arts Centre", time: "Morning/Afternoon", notes: "Galleries, craft studios and shop in Portstewart — easy add-on to the town wander.", interested: [] },
+      { id: "aug5-causeway-opt",      name: "Giant's Causeway / Dunluce / Carrick-a-Rede", time: "Option today too", notes: "All doable today if preferred — the main plan is Thursday morning (E/G hold 10:30 AM Carrick-a-Rede tickets for Thursday).", interested: [] },
+    ],
+    van: [
+      { time: "~10:30 AM", desc: "Van to Portstewart — non-golfers welcome to ride along!", who: "Golfers + interested non-golfers" },
+      { time: "Afternoon",  desc: "Available for Bushmills Distillery, coastal areas, Bushmills pickup", who: "Non-golfers" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Portrush Adelphi"
+    },
+    dinnerOptions: [
+      { id: "aug5-dinner-town", name: "Dinner in Portrush Town", time: "Evening", notes: "Plenty of options along the seafront.", interested: [] },
+      { id: "aug5-dinner-adelphi", name: "Adelphi Hotel Dining", time: "Evening", notes: "Stay in for dinner at the hotel.", interested: [] }
+    ],
+    notes: ""
+  },
+  {
+    id: "aug6",
+    date: "Aug 6 (Thu)",
+    label: "Golf Day 5 — Royal Portrush",
+    location: "Portrush → Portmarnock",
+    hotel: { name: "Portmarnock Resort", area: "Co. Dublin · 4★ · Spa ✓ · Double Guest Room · Return for final 2 nights" },
+    travel: "⚠️ COMPLEX DAY. Golf 3:36pm. Full morning free. After golf, ~3 hr drive back to Dublin/Portmarnock.",
+    golf: {
+      course: "Royal Portrush Golf Club — Dunluce Course",
+      rank: "🏆 Ranked #14 Worldwide · Hosted The Open Championship 1951, 2019, 2025!",
+      teeTime: "3:36 PM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "gary"],
+      notes: "One of the greatest courses on earth. Buggies by medical note only (must pre-book). Caddies available (advance booking required). Full morning free for Causeway Coast sightseeing.",
+      proTip: "Halcyon tip: Add the Valley Course for an unforgettable 36-hole day — recently transformed and spectacular."
+    },
+    activities: [
+      { id: "aug6-dunluce",    name: "Dunluce Castle", time: "Morning", notes: "11 min from hotel! Medieval cliff-edge castle ruins. Stunning views. No advance booking needed. Elizabeth + George planning this.", interested: ["elizabeth"] },
+      { id: "aug6-causeway",   name: "Giant's Causeway", time: "Morning/Midday", notes: "🚨 BOOK IN ADVANCE — SELLS OUT! 17 min drive. Walk: Short (1mi) / Medium (2mi) / Long (5mi). UNESCO World Heritage. Elizabeth wants the 5-mile hike.", interested: ["elizabeth"] },
+      { id: "aug6-carrick",    name: "Carrick-a-Rede Rope Bridge", time: "10:30 AM", notes: "25 min from hotel. Dramatic rope bridge 30m over sea. ✅ Elizabeth & George have 10:30 AM tickets for today — others must book in advance (sells out!).", interested: ["elizabeth"] },
+    ],
+    van: [
+      { time: "Morning",           desc: "Non-golfers: Dunluce Castle → Giant's Causeway → Carrick-a-Rede", who: "Non-golfers + George (before golf)" },
+      { time: "~3:00 PM",          desc: "Van to Royal Portrush — Dunluce Course (Golf)", who: "Golfers" },
+      { time: "After golf (~7pm)", desc: "Drive to Portmarnock (~3 hrs) — arrive late", who: "Everyone" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Portrush Adelphi"
+    },
+    dinnerOptions: [
+      { id: "aug6-dinner-portrush", name: "Eat in Portrush Before Departing", time: "Before ~7 PM", notes: "Grab dinner before the drive south — arrival in Portmarnock will be late.", interested: [] },
+      { id: "aug6-dinner-portmarnock", name: "Late Dining at Portmarnock Resort", time: "~10 PM arrival", notes: "Arrange hotel late dining for whoever prefers to eat after arriving.", interested: [] }
+    ],
+    notes: "⚠️ Book Giant's Causeway and Carrick-a-Rede in advance — summer slots sell out. Driver max 11 hrs/day."
+  },
+  {
+    id: "aug7",
+    date: "Aug 7 (Fri)",
+    label: "Golf Day 6 — Royal Dublin",
+    location: "Portmarnock / Dublin",
+    hotel: { name: "Portmarnock Resort", area: "Co. Dublin · 4★ · Spa ✓ · Last night" },
+    travel: "Final day. Golf at 11:20am. Dublin area accessible all day.",
+    golf: {
+      course: "Royal Dublin Golf Club",
+      rank: "Ranked #23 in Ireland · Bull Island, Dublin Bay",
+      teeTime: "11:20 AM",
+      golfers: ["george", "eric", "jeff", "phil", "robert", "elizabeth"],
+      notes: "Final round! Hosted Irish Open 6 times. Lunch INCLUDED at the club (golfers). Caddies: book 48hrs ahead €80/€120. Buggies available.",
+      proTip: "Make sure to enjoy the superb included lunch at Royal Dublin Golf Club!"
+    },
+    activities: [
+      { id: "aug7-howth",    name: "Howth Village & Cliff Walk", time: "All Day", notes: "Scenic fishing village 15 min from hotel. Excellent seafood restaurants. Cliff walk with stunning views.", interested: [] },
+      { id: "aug7-malahide", name: "Malahide Castle & Grounds", time: "Morning/Afternoon", notes: "5 min from Portmarnock. Beautiful grounds, medieval castle tours.", interested: [] },
+      { id: "aug7-dublin",   name: "Dublin City", time: "All Day", notes: "Last chance for shopping, museums, galleries. ~30 min from hotel. Grafton St, St. Patrick's Cathedral.", interested: [] },
+      { id: "aug7-guinness", name: "Guinness Storehouse", time: "Morning/Afternoon", notes: "Dublin's most-visited attraction — Gravity Bar pint with 360° city views. Book a time slot online.", interested: [] },
+      { id: "aug7-kells",    name: "Book of Kells & Trinity Long Room", time: "Morning/Afternoon", notes: "🚨 NEEDS TICKETS — book in advance at visittrinity.ie, summer slots sell out.", interested: [] },
+    ],
+    van: [
+      { time: "~10:30 AM", desc: "Van to Royal Dublin Golf Club (Golf)", who: "Golfers" },
+      { time: "All Day",   desc: "Available for Howth, Malahide, Dublin city", who: "Non-golfers" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Portmarnock Resort",
+      lunch: "✅ Included at Royal Dublin Golf Club (golfers) · On own for non-golfers"
+    },
+    dinnerOptions: [
+      { id: "aug7-dinner-farewell", name: "🥂 Farewell Group Dinner, Dublin", time: "Evening", notes: "Reserve a group restaurant in Dublin (~30 min away) — book ahead for the full group.", interested: [] }
+    ],
+    notes: ""
+  },
+  {
+    id: "aug8",
+    date: "Aug 8 (Sat)",
+    label: "Departure Day",
+    location: "Portmarnock → Dublin Airport",
+    hotel: { name: "Check out Portmarnock Resort", area: "Coach to Dublin Airport (DUB) · ⚠️ Robert & Meg need hotel Aug 8 night — fly home Aug 9" },
+    travel: "",
+    golf: null,
+    activities: [
+      { id: "aug8-early-bird", name: "Departing Today", time: "Morning", notes: "Allow at least 3 hours before flight. Dublin Airport is ~30 min from hotel.", interested: [] },
+      { id: "aug8-robert-meg-extra", name: "Robert & Meg — Extra Night in Dublin", time: "All Day", notes: "Fly home Sun Aug 9 (DL177, 11:00AM). Dublin hotel for tonight still to book.", interested: ["robert", "meg"] },
+      { id: "aug8-extra-day", name: "Anyone Else Staying Extra?", time: "All Day", notes: "Dublin has great culture, food and pubs for an extra night!", interested: [] },
+    ],
+    van: [
+      { time: "~5:45 AM",  desc: "First coach run — Phil & Kerith to DUB (EI156 departs 8:50 AM)", who: "Phil, Kerith" },
+      { time: "~8:00 AM",  desc: "Second run — Gary & Cindy to DUB (DL0177 departs 11:00 AM)", who: "Gary, Cindy" },
+      { time: "~12:00 PM", desc: "Third run — Eric, DeeDee, George, Elizabeth, Jeff & Paige to DUB (3:00 & 3:25 PM flights)", who: "Eric, DeeDee, George, Elizabeth, Jeff, Paige" },
+      { time: "Midday",    desc: "Robert & Meg to their Dublin hotel for the extra night (fly home Aug 9)", who: "Robert, Meg" }
+    ],
+    meals: {
+      breakfast: "✅ Included at Portmarnock Resort (before checkout)"
+    },
+    notes: "⚠️ Robert & Meg need a Dublin hotel for Sat Aug 8 night — the Halcyon package ends at Portmarnock checkout. Allow 3 hrs at DUB before each flight (~30 min from hotel)."
+  }
+];
+
+// Short course name for the glance matrix
+const COURSE_SHORT = {
+  aug2: "Portmarnock GC", aug3: "Royal County Down", aug4: "Ardglass",
+  aug5: "Portstewart", aug6: "Royal Portrush", aug7: "Royal Dublin"
+};
+// Which days have flight events (for day-card strips)
+const FLIGHTS_BY_DAY = {
+  aug1: ["robert-arr", "ed-arr", "pk-arr"],
+  aug4: ["meg-arr"],
+  aug8: ["pk-dep", "gc-dep", "ed-dep", "sea-dep", "rm-dep"]
+};
+
+// ============================================================
+// STATE (localStorage)
+// ============================================================
+let state = {
+  currentUser: "",
+  selectedPerson: "robert",
+  personNotes: {},
+  activities: {},
+  userInterests: {},
+  vanRequests: [],
+  activityEdits: {},
+  customActivities: {},
+  hiddenActivities: [],
+  vanOverrides: {},
+  dayEdits: {},
+  customFlights: [],
+  customMeals: {},
+  hiddenMeals: [],
+  scheduleFilter: "",
+};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem("irelandTrip2026");
+    if (saved) Object.assign(state, JSON.parse(saved));
+    if (state.currentUser && state.activities && Object.keys(state.activities).length) {
+      if (!state.userInterests[state.currentUser]) {
+        state.userInterests[state.currentUser] = Object.assign({}, state.activities);
+      }
+    }
+  } catch(e) {}
+  normalizeArrayKeys();
+}
+
+function saveState() {
+  try { localStorage.setItem("irelandTrip2026", JSON.stringify(state)); } catch(e) {}
+}
+
+// ============================================================
+// FIREBASE REAL-TIME SYNC
+// ============================================================
+const SYNCED_KEYS = ['userInterests','activityEdits','customActivities','hiddenActivities',
+                     'vanOverrides','dayEdits','vanRequests','customFlights','customMeals','hiddenMeals'];
+
+let db = null;
+
+// Firebase can return arrays as objects (or drop empty arrays, leaving a stray
+// wrapper). Coerce anything back into a clean array of flight/request objects.
+function asArray(v) {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === 'object') return Object.values(v).filter(x => x && typeof x === 'object' && 'id' in x);
+  return [];
+}
+function normalizeArrayKeys() {
+  state.customFlights = asArray(state.customFlights);
+  state.vanRequests = asArray(state.vanRequests);
+}
+
+function initFirebase() {
+  if (!FIREBASE_CONFIG || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return;
+  const s1 = document.createElement('script');
+  s1.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js';
+  s1.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js';
+    s2.onload = () => {
+      try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        db = firebase.database();
+        setSyncStatus('connecting');
+        loadFromFirebase().then(() => subscribeRealtime());
+      } catch(e) { console.warn('Firebase init failed:', e); setSyncStatus('offline'); }
+    };
+    s2.onerror = () => setSyncStatus('offline');
+    document.head.appendChild(s2);
+  };
+  s1.onerror = () => setSyncStatus('offline');
+  document.head.appendChild(s1);
+}
+
+async function loadFromFirebase() {
+  if (!db) return;
+  try {
+    const snapshot = await db.ref('ireland2026').get();
+    if (snapshot.exists()) {
+      snapshot.forEach(child => {
+        if (SYNCED_KEYS.includes(child.key)) {
+          const data = child.val();
+          state[child.key] = data && data.v !== undefined ? data.v : data;
+        }
+      });
+      normalizeArrayKeys();
+      saveState();
+      renderAll();
+    }
+    setSyncStatus('connected');
+  } catch(e) {
+    console.warn('Firebase load failed:', e);
+    setSyncStatus('offline');
+  }
+}
+
+async function syncKey(key) {
+  if (!db || !SYNCED_KEYS.includes(key)) return;
+  try {
+    await db.ref('ireland2026/' + key).set({
+      v:  state[key],
+      by: state.currentUser || '',
+      at: new Date().toISOString()
+    });
+  } catch(e) { console.warn('syncKey failed:', e); }
+}
+
+function subscribeRealtime() {
+  if (!db) return;
+  let ready = false;
+  db.ref('ireland2026').once('value', () => { ready = true; setSyncStatus('connected'); });
+
+  const applyUpdate = snapshot => {
+    if (!ready) return;
+    const key = snapshot.key;
+    const data = snapshot.val();
+    if (!SYNCED_KEYS.includes(key) || !data) return;
+    if (data.by && data.by === state.currentUser) return;
+    state[key] = data.v !== undefined ? data.v : data;
+    normalizeArrayKeys();
+    saveState();
+    renderAll();
+    const activePane = document.querySelector('.tab-pane.active');
+    if (activePane?.id === 'tab-van') renderVanTab();
+    if (activePane?.id === 'tab-people') renderPeopleTab();
+    if (activePane?.id === 'tab-cup' && typeof renderCupAll === 'function') renderCupAll();
+    showSyncToast(data.by);
+  };
+
+  db.ref('ireland2026').on('child_added',   applyUpdate);
+  db.ref('ireland2026').on('child_changed', applyUpdate);
+}
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + s;
+  dot.title = { connected: 'Live sync active', connecting: 'Connecting to sync…', offline: 'Offline — saved locally' }[s] || '';
+}
+
+function showSyncToast(userId) {
+  const name = PARTICIPANTS.find(p => p.id === userId)?.name;
+  if (!name) return;
+  let t = document.getElementById('sync-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'sync-toast'; document.body.appendChild(t); }
+  t.textContent = name + ' just updated the plans';
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============================================================
+// INLINE EDIT HELPERS
+// ============================================================
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveActivityEdit(actId, field, value) {
+  if (!state.activityEdits[actId]) state.activityEdits[actId] = {};
+  state.activityEdits[actId][field] = value;
+  saveState(); syncKey('activityEdits');
+}
+
+function saveVanEdit(dayId, idx, field, value) {
+  if (!state.vanOverrides[dayId]) {
+    const day = DAYS.find(d => d.id === dayId);
+    state.vanOverrides[dayId] = day.van.map(v => Object.assign({}, v));
+  }
+  if (state.vanOverrides[dayId][idx]) state.vanOverrides[dayId][idx][field] = value;
+  saveState(); syncKey('vanOverrides');
+}
+
+function saveDayEdit(dayId, field, value) {
+  if (!state.dayEdits[dayId]) state.dayEdits[dayId] = {};
+  state.dayEdits[dayId][field] = value;
+  saveState(); syncKey('dayEdits');
+}
+
+function addMeal(dayId) {
+  if (!state.customMeals[dayId]) state.customMeals[dayId] = [];
+  const id = 'custom-meal-' + dayId + '-' + Date.now();
+  state.customMeals[dayId].push({ id, name: 'New Meal Option', notes: '', time: '', interested: [] });
+  saveState(); syncKey('customMeals');
+  renderSchedule();
+  setTimeout(() => {
+    const el = document.querySelector('[data-actid="' + id + '"] .editable');
+    if (el) { el.focus(); document.execCommand('selectAll', false, null); }
+  }, 60);
+}
+
+function deleteCustomMeal(dayId, mealId) {
+  if (!state.customMeals[dayId]) return;
+  state.customMeals[dayId] = state.customMeals[dayId].filter(m => m.id !== mealId);
+  saveState(); syncKey('customMeals');
+  renderSchedule();
+}
+
+function deleteMeal(mealId) {
+  if (!state.hiddenMeals) state.hiddenMeals = [];
+  if (!state.hiddenMeals.includes(mealId)) state.hiddenMeals.push(mealId);
+  saveState(); syncKey('hiddenMeals');
+  renderSchedule();
+}
+
+function deleteActivity(actId) {
+  if (!state.hiddenActivities) state.hiddenActivities = [];
+  const idx = state.hiddenActivities.indexOf(actId);
+  if (idx === -1) state.hiddenActivities.push(actId);
+  saveState(); syncKey('hiddenActivities');
+  renderSchedule();
+}
+
+function addActivity(dayId) {
+  if (!state.customActivities[dayId]) state.customActivities[dayId] = [];
+  const id = 'custom-' + dayId + '-' + Date.now();
+  state.customActivities[dayId].push({ id, name: 'New Activity', notes: '', time: '' });
+  saveState(); syncKey('customActivities');
+  renderSchedule();
+  setTimeout(() => {
+    const el = document.querySelector('[data-actid="' + id + '"] .editable');
+    if (el) { el.focus(); document.execCommand('selectAll', false, null); }
+  }, 60);
+}
+
+function deleteCustomActivity(dayId, actId) {
+  if (!state.customActivities[dayId]) return;
+  state.customActivities[dayId] = state.customActivities[dayId].filter(a => a.id !== actId);
+  saveState(); syncKey('customActivities');
+  renderSchedule();
+}
+
+function addVanEntry(dayId) {
+  if (!state.vanOverrides[dayId]) {
+    const day = DAYS.find(d => d.id === dayId);
+    state.vanOverrides[dayId] = day.van.map(v => Object.assign({}, v));
+  }
+  state.vanOverrides[dayId].push({ time: 'TBD', desc: 'New entry — click to edit', who: '' });
+  saveState(); syncKey('vanOverrides');
+  renderSchedule();
+}
+
+function deleteVanEntry(dayId, idx) {
+  if (!state.vanOverrides[dayId]) {
+    const day = DAYS.find(d => d.id === dayId);
+    state.vanOverrides[dayId] = day.van.map(v => Object.assign({}, v));
+  }
+  state.vanOverrides[dayId].splice(idx, 1);
+  saveState(); syncKey('vanOverrides');
+  renderSchedule();
+}
+
+// ============================================================
+// NAME OVERLAY
+// ============================================================
+function showNameOverlay() {
+  const grid = document.getElementById('noc-grid');
+  grid.innerHTML = PARTICIPANTS.map(p =>
+    `<div class="noc-btn" onclick="selectNameFromOverlay('${p.id}')">
+      <span class="noc-btn-emoji">${p.emoji}</span>
+      <span class="noc-btn-name">${p.name}</span>
+    </div>`
+  ).join('');
+  document.getElementById('name-overlay').classList.remove('hidden');
+}
+
+function selectNameFromOverlay(id) {
+  document.getElementById('name-overlay').classList.add('hidden');
+  setUser(id);
+}
+
+// ============================================================
+// USER SELECTION
+// ============================================================
+function setUser(val) {
+  state.currentUser = val;
+  document.getElementById("who-name").textContent = val ? PARTICIPANTS.find(p=>p.id===val)?.name || val : "—";
+  document.getElementById("user-select").value = val;
+  saveState();
+  renderAll();
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(id) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-pane").forEach(t => t.classList.remove("active"));
+  const idx = ["schedule","flights","people","van","cup"].indexOf(id);
+  document.querySelectorAll(".tab")[idx].classList.add("active");
+  document.getElementById("tab-"+id).classList.add("active");
+  if (id === "flights") renderFlightsTab();
+  if (id === "van") renderVanTab();
+  if (id === "people") renderPeopleTab();
+  if (id === "cup" && typeof renderCupAll === "function") renderCupAll();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function getParticipant(id) { return PARTICIPANTS.find(p=>p.id===id); }
+
+function isGolfer(personId, dayId) {
+  const p = getParticipant(personId);
+  if (!p) return false;
+  if (p.golfsAll) return true;
+  return p.golfDays && p.golfDays.includes(dayId);
+}
+
+function getDayGolfers(day) {
+  if (!day.golf) return [];
+  return day.golf.golfers;
+}
+
+function dayIndex(dayId) { return DAYS.findIndex(d => d.id === dayId); }
+function isPresent(personId, dayId) {
+  const arr = ARRIVAL[personId] || "aug1";
+  return dayIndex(dayId) >= dayIndex(arr);
+}
+
+// All activities for a day: built-in (minus hidden) + custom
+function dayAllActivities(day) {
+  const hidden = state.hiddenActivities || [];
+  const custom = (state.customActivities && state.customActivities[day.id]) ? asArray(state.customActivities[day.id]) : [];
+  return [...day.activities, ...custom].filter(a => !hidden.includes(a.id));
+}
+
+// All joinable meal (dinner) options for a day: built-in (minus hidden) + custom
+function dayAllMeals(day) {
+  const hidden = state.hiddenMeals || [];
+  const base = day.dinnerOptions || [];
+  const custom = (state.customMeals && state.customMeals[day.id]) ? asArray2(state.customMeals[day.id]) : [];
+  return [...base, ...custom].filter(m => !hidden.includes(m.id));
+}
+function asArray2(v) {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === 'object') return Object.values(v).filter(x => x && typeof x === 'object' && 'id' in x);
+  return [];
+}
+
+// Is this person confirmed for this activity? Seed lists count unless they've opted out.
+function isGoing(personId, actId) {
+  const override = state.userInterests?.[personId]?.[actId];
+  if (override === true) return true;
+  if (override === false) return false;
+  const act = DAYS.flatMap(d => dayAllActivities(d).concat(dayAllMeals(d))).find(a => a.id === actId);
+  return !!(act && act.interested && act.interested.includes(personId));
+}
+
+function getInterestedNames(actId) {
+  return PARTICIPANTS.filter(p => isGoing(p.id, actId)).map(p => p.name);
+}
+
+// ============================================================
+// GLANCE MATRIX — everyone's schedule at once
+// ============================================================
+function renderGlance() {
+  const me = state.currentUser;
+
+  // Desktop table
+  const header = `<tr>
+    <th class="gt-corner">Who's playing →</th>
+    ${PARTICIPANTS.map(p => `<th class="gt-person ${p.id===me?'gtp-me':''}">
+      <span class="gtp-emoji">${p.golfsAll ? '⛳' : (p.golfDays && p.golfDays.length ? '⛳' : '○')}</span>
+      <span class="gtp-name">${p.name}</span>
+    </th>`).join('')}
+  </tr>`;
+
+  const rows = DAYS.map(day => {
+    const isGolfDay = !!day.golf;
+    const dayCol = `<th class="gt-day">
+      <div class="gtd-date">${esc(day.date.replace(/\(.*\)/,'').trim())}</div>
+      ${isGolfDay
+        ? `<div class="gtd-course">${esc(COURSE_SHORT[day.id] || day.label)}</div>`
+        : `<div class="gtd-course">${esc(day.label)}</div><div class="gtd-free">No golf</div>`}
+    </th>`;
+    const cells = PARTICIPANTS.map(p => {
+      let cls, inner, title;
+      if (!isPresent(p.id, day.id)) {
+        cls = 'gc-none'; inner = '·'; title = `${p.name} arrives ${ARRIVAL[p.id]==='aug4'?'Aug 4':''}`.trim();
+      } else if (isGolfDay && day.golf.golfers.includes(p.id)) {
+        cls = 'gc-golf'; inner = '⛳'; title = `${p.name} — ${COURSE_SHORT[day.id]} at ${day.golf.teeTime}`;
+      } else {
+        cls = 'gc-free'; inner = '–'; title = `${p.name} — free`;
+      }
+      return `<td class="gc ${cls} ${p.id===me?'gc-me':''}" title="${esc(title)}"><div class="gc-inner">${inner}</div></td>`;
+    }).join('');
+    return `<tr class="${''}">${dayCol}${cells}</tr>`;
+  }).join('');
+
+  const table = `<div class="glance-scroll"><table class="glance-table">
+    <thead>${header}</thead><tbody>${rows}</tbody></table></div>`;
+
+  // Mobile board
+  const mobile = `<div class="glance-mobile">${DAYS.map(day => {
+    const isGolfDay = !!day.golf;
+    const golfers = isGolfDay ? day.golf.golfers : [];
+    const present = PARTICIPANTS.filter(p => isPresent(p.id, day.id));
+    const playing = present.filter(p => golfers.includes(p.id));
+    const free = present.filter(p => !golfers.includes(p.id));
+    const notYet = PARTICIPANTS.filter(p => !isPresent(p.id, day.id));
+    const chip = (p, type) => `<span class="gm-chip ${type} ${p.id===state.currentUser?'gm-me':''}">${p.name}</span>`;
+    return `<div class="gm-day">
+      <div class="gm-head">
+        <span class="gm-date">${esc(day.date.replace(/\(.*\)/,'').trim())}</span>
+        <span class="gm-course">${esc(isGolfDay ? (COURSE_SHORT[day.id]||day.label) : day.label)}</span>
+        ${isGolfDay ? `<span class="gm-tee">Tee ${esc(day.golf.teeTime)}</span>` : `<span class="gm-tee">No golf</span>`}
+      </div>
+      <div class="gm-chips">
+        ${playing.map(p => chip(p,'gm-golf')).join('')}
+        ${playing.length && free.length ? `<span class="gm-divider">free</span>` : ''}
+        ${free.map(p => chip(p,'gm-free')).join('')}
+        ${notYet.length ? `<span class="gm-divider">not arrived</span>${notYet.map(p=>`<span class="gm-chip gm-free" style="opacity:.5">${p.name}</span>`).join('')}` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+
+  return `<div class="glance">
+    <div class="glance-title">Everyone's week at a glance</div>
+    <div class="glance-sub">Who's playing golf and who's free, every day — tap a day below for full detail.</div>
+    ${table}
+    ${mobile}
+    <div class="glance-legend">
+      <span><span class="lg-sw lg-golf"></span> Playing golf</span>
+      <span><span class="lg-sw lg-free"></span> Free / non-golf</span>
+      <span><span class="lg-sw lg-none"></span> Not arrived yet</span>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// RENDER SCHEDULE
+// ============================================================
+function renderScheduleFilterBar() {
+  const mount = document.getElementById("schedule-filter-mount");
+  if (!mount) return;
+  const val = state.scheduleFilter || "";
+  mount.innerHTML = `<span class="sf-label">Show:</span>
+    <select id="schedule-filter-select" onchange="setScheduleFilter(this.value)">
+      <option value="">Everyone</option>
+      ${PARTICIPANTS.map(p => `<option value="${p.id}" ${val === p.id ? "selected" : ""}>${esc(p.name)}${p.id === state.currentUser ? " (me)" : ""}</option>`).join("")}
+    </select>`;
+}
+
+function setScheduleFilter(val) {
+  state.scheduleFilter = val;
+  saveState();
+  renderSchedule();
+}
+
+function renderSchedule() {
+  renderScheduleFilterBar();
+  const container = document.getElementById("schedule-days");
+  const openIds = new Set([...container.querySelectorAll('.day-card.open')].map(el => el.id));
+  container.innerHTML = DAYS.map((day, i) => renderDayCard(day, i)).join("");
+  const cards = container.querySelectorAll(".day-card");
+  if (openIds.size) {
+    cards.forEach(c => { if (openIds.has(c.id)) c.classList.add("open"); });
+  } else if (cards.length) {
+    cards[0].classList.add("open");
+  }
+}
+
+function flightStripHtml(dayId) {
+  const ids = FLIGHTS_BY_DAY[dayId];
+  if (!ids) return "";
+  return ids.map(k => {
+    const f = FLIGHTS.find(x => x.id === k); if (!f) return "";
+    const time = f.arriveLabel ? `<span class="fs-time"> · ${esc(f.arriveLabel)}</span>` : "";
+    return `<div class="flight-strip">
+      <div class="fs-ico">${f.drive ? '🚗' : '✈'}</div>
+      <div class="fs-body">
+        <div class="fs-who">${esc(f.who)}${time}</div>
+        <div class="fs-route">${esc(f.segments)}</div>
+        ${f.cabin || f.conf ? `<div class="fs-meta">${[f.cabin, f.conf ? 'Conf# '+f.conf : ''].filter(Boolean).join(' · ')}</div>` : ''}
+        ${f.note ? `<div class="fs-note">${esc(f.note)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function flightForPerson(pid, dayId) {
+  if (dayId === 'aug1') {
+    if (pid === 'robert') return '✈ Arrives Dublin 10:00 AM (DL292)';
+    if (pid === 'eric' || pid === 'deedee') return '✈ Arrives Dublin 10:00 AM (DL0292)';
+    if (pid === 'phil' || pid === 'kerith') return '✈ Arrives Dublin 7:30 PM (SAS4603)';
+    if (pid === 'gary' || pid === 'cindy') return '🚗 Transfer from Fitzwilliam Hotel, Dublin';
+    if (pid === 'george' || pid === 'elizabeth') return '🚗 Drives in from Galway pre-trip · late afternoon';
+    if (pid === 'jeff' || pid === 'paige') return '🚗 Joins from pre-trip (arrived Jul 28)';
+  }
+  if (dayId === 'aug4' && pid === 'meg') return '✈ Arrives Dublin 10:00 AM — driver collects, back to Slieve Donard ~3 PM';
+  if (dayId === 'aug8') {
+    if (pid === 'robert' || pid === 'meg') return 'Extra night in Dublin · flies home Aug 9';
+    if (pid === 'phil' || pid === 'kerith') return '✈ Departs 8:50 AM (EI156) — early coach';
+    if (pid === 'gary' || pid === 'cindy') return '✈ Departs 11:00 AM (DL0177)';
+    if (pid === 'eric' || pid === 'deedee') return '✈ Departs 3:00 PM (DL0155)';
+    return '✈ Departs 3:25 PM (EI0053)';
+  }
+  return null;
+}
+
+// Rough time (minutes from midnight) for chronological ordering
+function timeOfStr(str, dflt) {
+  const s = (str || '').toLowerCase();
+  const m = s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  if (m) { let h = +m[1] % 12; if (m[3] === 'pm') h += 12; return h * 60 + (+m[2] || 0); }
+  if (s.includes('morning')) return 9 * 60;
+  if (s.includes('midday') || s.includes('during golf')) return 12 * 60;
+  if (s.includes('afternoon')) return 14 * 60;
+  if (s.includes('evening')) return 18 * 60;
+  if (s.includes('all day') || s.includes('anytime')) return 8 * 60;
+  return dflt;
+}
+
+// What is this person doing on this day? Feeds the roster.
+function personDayPlan(personId, day) {
+  if (!isPresent(personId, day.id)) {
+    const arr = DAYS.find(d => d.id === (ARRIVAL[personId] || 'aug1'));
+    return { kind: 'away', primary: 'Arrives ' + (arr ? arr.date.replace(/\(.*\)/, '').trim() : 'later'), secondary: '' };
+  }
+  const flight = flightForPerson(personId, day.id);
+  const golfs = isGolfer(personId, day.id) && day.golf;
+  const acts = dayAllActivities(day).filter(a => isGoing(personId, a.id));
+  // Rough time (minutes from midnight) for chronological ordering
+  const timeOf = timeOfStr;
+  const items = acts.map(a => {
+    const ae = state.activityEdits[a.id] || {};
+    const nm = (ae.name !== undefined ? ae.name : a.name).replace(/^✈️\s*/, '').replace(/^🚨\s*/, '').trim();
+    const tm = ae.time !== undefined ? ae.time : a.time;
+    return { label: tm ? nm + ' (' + tm + ')' : nm, t: timeOf(tm, 11 * 60) };
+  });
+  if (golfs) items.push({ label: '⛳ ' + (COURSE_SHORT[day.id] || day.golf.course) + ' · tee ' + day.golf.teeTime, t: timeOf(day.golf.teeTime, 12 * 60) });
+  items.sort((a, b) => a.t - b.t);
+  const actText = items.map(x => x.label);
+  // Arrival / departure days lead with travel
+  if (flight) {
+    return { kind: 'travel', primary: flight, secondary: actText.length ? 'Also: ' + actText.join(' · ') : '' };
+  }
+  if (golfs) {
+    return { kind: 'golf', primary: actText.join(' · '), secondary: '' };
+  }
+  if (actText.length) {
+    return { kind: 'active', primary: actText.join(' · '), secondary: '' };
+  }
+  return { kind: 'free', primary: 'Free — open to plans', secondary: '' };
+}
+
+// Town-to-town van transfers — whole group moves
+const CITY_TRANSFERS = {
+  aug2: { t: 17.5 * 60, label: '🚐 Van — Portmarnock → Newcastle · depart ~5:30 PM · arrive ~7:30 PM' },
+  aug4: { t: 16 * 60,   label: '🚐 Van — Ardglass → Portrush · depart ~4:00 PM · arrive ~6:00 PM' },
+  aug6: { t: 19 * 60,   label: '🚐 Van — Portrush → Portmarnock · depart ~7:00 PM (after golf) · arrive ~10:00 PM' }
+};
+
+function renderRoster(day) {
+  const me = state.currentUser;
+  const present = PARTICIPANTS.filter(p => isPresent(p.id, day.id));
+  const events = [];
+
+  // Flights / travel (grouped by identical travel text)
+  const travelGroups = {};
+  present.forEach(p => {
+    const f = flightForPerson(p.id, day.id);
+    if (f) (travelGroups[f] = travelGroups[f] || []).push(p);
+  });
+  Object.entries(travelGroups).forEach(([label, people]) => {
+    events.push({ t: timeOfStr(label, 7 * 60), kind: 'travel', label, people });
+  });
+
+  // Golf — full detail folded into the roster row
+  if (day.golf) {
+    const golfers = present.filter(p => day.golf.golfers.includes(p.id));
+    if (golfers.length) events.push({
+      t: timeOfStr(day.golf.teeTime, 12 * 60), kind: 'golf',
+      label: '⛳ ' + day.golf.course + ' · tee ' + day.golf.teeTime,
+      rank: day.golf.rank || '',
+      detail: day.golf.notes || '',
+      proTip: day.golf.proTip || '',
+      people: golfers
+    });
+  }
+
+  // Activities with at least one confirmed person
+  dayAllActivities(day).forEach(a => {
+    const goers = present.filter(p => isGoing(p.id, a.id));
+    if (!goers.length) return;
+    const ae = state.activityEdits[a.id] || {};
+    const nm = (ae.name !== undefined ? ae.name : a.name).replace(/^✈️\s*/, '').replace(/^🚨\s*/, '').trim();
+    const tm = ae.time !== undefined ? ae.time : a.time;
+    events.push({ t: timeOfStr(tm, 11 * 60), kind: 'active', label: tm ? nm + ' (' + tm + ')' : nm, people: goers });
+  });
+
+  // Town-to-town transfer — everyone
+  if (CITY_TRANSFERS[day.id]) {
+    const ct = CITY_TRANSFERS[day.id];
+    events.push({ t: ct.t, kind: 'travel', label: ct.label, people: present });
+  }
+
+  // Meals — breakfast/lunch are covered for everyone (or golfers) and shown as FYI;
+  // dinner options are joinable, so only ones with confirmed people show here.
+  if (day.meals?.breakfast) {
+    events.push({ t: 7.5 * 60, kind: 'meal', label: '🍳 Breakfast — ' + day.meals.breakfast.replace(/^✅\s*/, ''), people: [] });
+  }
+  if (day.meals?.lunch) {
+    events.push({ t: 12.5 * 60, kind: 'meal', label: '🥗 Lunch — ' + day.meals.lunch.replace(/^✅\s*/, ''), people: [] });
+  }
+  dayAllMeals(day).forEach(m => {
+    const goers = present.filter(p => isGoing(p.id, m.id));
+    if (!goers.length) return;
+    const ae = state.activityEdits[m.id] || {};
+    const nm = ae.name !== undefined ? ae.name : m.name;
+    const tm = ae.time !== undefined ? ae.time : m.time;
+    events.push({ t: timeOfStr(tm, 19 * 60), kind: 'meal', label: '🍽 ' + nm + (tm ? ' (' + tm + ')' : ''), people: goers });
+  });
+
+  events.sort((a, b) => a.t - b.t);
+
+  // People not committed to anything today (golf/activities/travel)
+  const busy = new Set(events.flatMap(e => e.people.map(p => p.id)));
+  const freePeople = present.filter(p => !busy.has(p.id));
+  if (freePeople.length) events.push({ kind: 'free', label: 'Free — open to plans', people: freePeople });
+
+  // Not yet arrived
+  const away = PARTICIPANTS.filter(p => !isPresent(p.id, day.id));
+  if (away.length) {
+    away.forEach(p => {
+      const arr = DAYS.find(d => d.id === (ARRIVAL[p.id] || 'aug1'));
+      events.push({ kind: 'away', label: 'Arrives ' + (arr ? arr.date.replace(/\(.*\)/, '').trim() : 'later'), people: [p] });
+    });
+  }
+
+  // Individual view: only show rows involving the selected person (plus FYI meal lines if they're present)
+  const filter = state.scheduleFilter || '';
+  let filteredEvents = events;
+  if (filter) {
+    filteredEvents = events
+      .filter(e => (e.kind === 'meal' && e.people.length === 0 && isPresent(filter, day.id)) || e.people.some(p => p.id === filter))
+      .map(e => e.people.length ? Object.assign({}, e, { people: e.people.filter(p => p.id === filter) }) : e);
+  }
+
+  const rows = filteredEvents.map(e => `<div class="roster-row kind-${e.kind} ${e.people.some(p => p.id === me) ? 'me' : ''}">
+      <div class="roster-plan">
+        <div class="rp-primary"><span class="rn-dot"></span>${esc(e.label)}${e.rank ? ` <span class="golf-rank" style="display:inline-block;margin-left:6px;white-space:nowrap;vertical-align:middle">${esc(e.rank)}</span>` : ''}</div>
+        ${e.detail ? `<div class="rp-secondary">${esc(e.detail)}</div>` : ''}
+        ${e.proTip ? `<div class="rp-secondary" style="color:var(--green)">Pro tip — ${esc(e.proTip)}</div>` : ''}
+        ${e.people.length ? `<div class="rp-names">${e.people.map(p => `<span class="rp-name ${p.id === me ? 'is-me' : ''}">${esc(p.name)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>`).join('');
+  const title = filter ? `${esc(getParticipant(filter)?.name || filter)}'s schedule` : "Who's doing what";
+  const emptyMsg = filter && !rows ? `<div style="font-size:12.5px;color:var(--ink-faint);padding:6px 2px">Nothing else planned — open.</div>` : "";
+  return `<div class="sec">
+    <div class="sec-title">${title}</div>
+    <div class="roster">${rows}${emptyMsg}</div>
+  </div>`;
+}
+
+function renderDayCard(day, i) {
+  const de = state.dayEdits[day.id] || {};
+
+  // Tags on header
+  const tags = [];
+  if (day.golf) tags.push(`<span class="day-tag golf">${day.golf.golfers.length} golfing</span>`);
+  else tags.push(`<span class="day-tag rest">No golf</span>`);
+  if (FLIGHTS_BY_DAY[day.id]) tags.push(`<span class="day-tag flight">✈ Flights</span>`);
+
+  // Flight details live in the "Who's doing what" roster (and the Flights tab) — no separate strip.
+  const flightHtml = "";
+
+  // Hotel + Travel
+  const travelText = de.travel !== undefined ? de.travel : (day.travel || '');
+  let hotelHtml = `<div class="hotel-strip">
+    <div class="ico">H</div>
+    <div>
+      <div class="hotel-title">${esc(day.hotel.name)}</div>
+      <div class="hotel-area">${esc(day.hotel.area)}</div>
+    </div>
+  </div>`;
+  if (travelText) hotelHtml += `<div class="day-note editable-block" contenteditable="true"
+    data-placeholder="Add travel notes..."
+    onblur="saveDayEdit('${day.id}','travel',this.innerText.trim())"
+    style="margin-top:8px">${esc(travelText)}</div>`;
+
+  // Golf details now live in the "Who's doing what" roster row — no separate section.
+  const golfHtml = "";
+
+  // Activities
+  const hidden = state.hiddenActivities || [];
+  const baseActs = day.activities.filter(a => !hidden.includes(a.id));
+  const customActs = state.customActivities[day.id] || [];
+
+  const renderAct = (act, isCustom) => {
+    const ae = state.activityEdits[act.id] || {};
+    const name  = ae.name  !== undefined ? ae.name  : (act.name  || '');
+    const notes = ae.notes !== undefined ? ae.notes : (act.notes || '');
+    const time  = ae.time  !== undefined ? ae.time  : (act.time  || '');
+    const isInterested = !!(state.currentUser && isGoing(state.currentUser, act.id));
+    const intNames = getInterestedNames(act.id);
+    const intText = intNames.length ? `Going: ${intNames.join(", ")}` : "";
+    const delFn = isCustom
+      ? `deleteCustomActivity('${day.id}','${act.id}')`
+      : `deleteActivity('${act.id}')`;
+    return `<div class="activity-item" id="act-${act.id}" data-actid="${act.id}">
+      <div class="act-content">
+        <div class="act-name"><span class="editable" contenteditable="true"
+          data-placeholder="Activity name"
+          onblur="saveActivityEdit('${act.id}','name',this.innerText.trim())"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(name)}</span></div>
+        <div class="act-notes"><span class="editable" contenteditable="true"
+          data-placeholder="Add notes..."
+          onblur="saveActivityEdit('${act.id}','notes',this.innerText.trim())"
+          >${esc(notes)}</span></div>
+        <div class="act-time"><span class="editable" contenteditable="true"
+          data-placeholder="Time"
+          onblur="saveActivityEdit('${act.id}','time',this.innerText.trim())"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(time)}</span></div>
+        ${intText ? `<div class="act-interested">${intText}</div>` : ""}
+      </div>
+      <button class="interest-btn ${isInterested ? "on" : ""}" onclick="toggleInterest('${act.id}')" title="${isInterested ? "Remove from my schedule" : "Confirm — add to my schedule"}">
+        ${isInterested ? "✓ Going" : "I’m in"}
+      </button>
+      <button class="delete-btn" onclick="${delFn}" title="Remove">✕</button>
+    </div>`;
+  };
+
+  const activitiesHtml = [
+    ...baseActs.map(a => renderAct(a, false)),
+    ...customActs.map(a => renderAct(a, true)),
+    `<button class="add-row-btn" onclick="addActivity('${day.id}')">＋ Add Activity</button>`
+  ].join("");
+
+  // Meals — breakfast/lunch FYI line + joinable dinner options
+  const mealFyi = [];
+  if (day.meals?.breakfast) mealFyi.push('🍳 Breakfast — ' + day.meals.breakfast);
+  if (day.meals?.lunch) mealFyi.push('🥗 Lunch — ' + day.meals.lunch);
+
+  const hiddenMeals = state.hiddenMeals || [];
+  const baseMeals = (day.dinnerOptions || []).filter(m => !hiddenMeals.includes(m.id));
+  const customMealsForDay = state.customMeals[day.id] || [];
+
+  const renderMealItem = (item, isCustom) => {
+    const ae = state.activityEdits[item.id] || {};
+    const name  = ae.name  !== undefined ? ae.name  : (item.name  || '');
+    const notes = ae.notes !== undefined ? ae.notes : (item.notes || '');
+    const time  = ae.time  !== undefined ? ae.time  : (item.time  || '');
+    const isInterested = !!(state.currentUser && isGoing(state.currentUser, item.id));
+    const intNames = getInterestedNames(item.id);
+    const intText = intNames.length ? `Going: ${intNames.join(", ")}` : "";
+    const delFn = isCustom ? `deleteCustomMeal('${day.id}','${item.id}')` : `deleteMeal('${item.id}')`;
+    return `<div class="activity-item" id="meal-${item.id}" data-actid="${item.id}">
+      <div class="act-content">
+        <div class="act-name"><span class="editable" contenteditable="true"
+          data-placeholder="Meal option"
+          onblur="saveActivityEdit('${item.id}','name',this.innerText.trim())"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(name)}</span></div>
+        <div class="act-notes"><span class="editable" contenteditable="true"
+          data-placeholder="Add notes..."
+          onblur="saveActivityEdit('${item.id}','notes',this.innerText.trim())"
+          >${esc(notes)}</span></div>
+        <div class="act-time"><span class="editable" contenteditable="true"
+          data-placeholder="Time"
+          onblur="saveActivityEdit('${item.id}','time',this.innerText.trim())"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(time)}</span></div>
+        ${intText ? `<div class="act-interested">${intText}</div>` : ""}
+      </div>
+      <button class="interest-btn ${isInterested ? "on" : ""}" onclick="toggleInterest('${item.id}')" title="${isInterested ? "Remove from my schedule" : "Confirm — add to my schedule"}">
+        ${isInterested ? "✓ Going" : "I’m in"}
+      </button>
+      <button class="delete-btn" onclick="${delFn}" title="Remove">✕</button>
+    </div>`;
+  };
+
+  const mealsHtml = [
+    ...baseMeals.map(m => renderMealItem(m, false)),
+    ...customMealsForDay.map(m => renderMealItem(m, true)),
+    `<button class="add-row-btn" onclick="addMeal('${day.id}')">＋ Add Meal Option</button>`
+  ].join("");
+
+  // Van
+  const vanItems = state.vanOverrides[day.id] || day.van;
+  const vanHtml = [
+    ...vanItems.map((v, idx) =>
+      `<div class="van-item">
+        <div class="van-time-badge"><span class="editable" contenteditable="true"
+          data-placeholder="Time"
+          onblur="saveVanEdit('${day.id}',${idx},'time',this.innerText.trim())"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+          >${esc(v.time)}</span></div>
+        <div style="flex:1;min-width:0">
+          <div class="van-desc"><span class="editable" contenteditable="true"
+            data-placeholder="Description"
+            onblur="saveVanEdit('${day.id}',${idx},'desc',this.innerText.trim())"
+            >${esc(v.desc)}</span></div>
+          <div class="van-who"><span class="editable" contenteditable="true"
+            data-placeholder="Who"
+            onblur="saveVanEdit('${day.id}',${idx},'who',this.innerText.trim())"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+            >${esc(v.who)}</span></div>
+        </div>
+        <button class="delete-btn" onclick="deleteVanEntry('${day.id}',${idx})" title="Remove">✕</button>
+      </div>`
+    ),
+    `<button class="add-row-btn" onclick="addVanEntry('${day.id}')">＋ Add Van Entry</button>`
+  ].join("");
+
+  // Day notes
+  const notesText = de.notes !== undefined ? de.notes : (day.notes || '');
+  const notesHtml = `<div class="sec">
+    <div class="sec-title">Notes</div>
+    <div class="day-note editable-block" contenteditable="true"
+      data-placeholder="Add notes for this day..."
+      onblur="saveDayEdit('${day.id}','notes',this.innerText.trim())"
+      >${esc(notesText)}</div>
+  </div>`;
+
+  const dayNumLabel = day.date.match(/Aug (\d+)/);
+  const numHtml = dayNumLabel ? `${dayNumLabel[1]}<small>AUG</small>` : `${i+1}`;
+
+  return `<div class="day-card" id="day-${day.id}" data-screen-label="${esc(day.date)}">
+    <div class="day-head" onclick="toggleDay('${day.id}')">
+      <div class="day-num">${numHtml}</div>
+      <div class="day-head-main">
+        <div class="day-meta">${esc(day.date)}</div>
+        <div class="day-name">${esc(day.label)}</div>
+        <div class="day-loc">${esc(day.location)}</div>
+      </div>
+      <div class="day-head-tags">${tags.join("")}</div>
+      <div class="day-chevron">›</div>
+    </div>
+    <div class="day-body">
+      ${flightHtml}
+      ${renderRoster(day)}
+      ${golfHtml}
+      <div class="sec"><div class="sec-title">Recommended activities</div><div class="activity-list">${activitiesHtml}</div></div>
+      <div class="sec">
+        <div class="sec-title">Meals</div>
+        ${mealFyi.length ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px">${mealFyi.map(esc).join(' &middot; ')}</div>` : ''}
+        <div class="activity-list">${mealsHtml}</div>
+      </div>
+      <div class="sec"><div class="sec-title">Van / Transport</div><div class="van-list">${vanHtml}</div></div>
+      <div class="sec"><div class="sec-title">Hotel</div>${hotelHtml}</div>
+      ${notesHtml}
+    </div>
+  </div>`;
+}
+
+function toggleDay(id) {
+  const card = document.getElementById("day-"+id);
+  card.classList.toggle("open");
+}
+
+// ============================================================
+// ACTIVITIES
+// ============================================================
+function toggleInterest(actId) {
+  if (!state.currentUser) {
+    showToast("Select your name at the top first!");
+    return;
+  }
+  const me = state.currentUser;
+  const going = isGoing(me, actId);
+  if (!state.userInterests[me]) state.userInterests[me] = {};
+  state.userInterests[me][actId] = !going;
+  saveState(); syncKey('userInterests');
+  renderSchedule();
+  if (document.getElementById("tab-people")) renderPeopleTab();
+  showToast(!going ? "✓ Added to your schedule" : "Removed from your schedule");
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  let t = document.getElementById("app-toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "app-toast";
+    t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .25s;pointer-events:none;";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.opacity = "0"; }, 2200);
+}
+
+// ============================================================
+// FLIGHTS TAB
+// ============================================================
+function renderFlightsTab() {
+  const mount = document.getElementById("flights-mount");
+  // Hide stale custom entries whose people are already covered by a built-in card (same direction)
+  const nameTokens = f => ((f.who || "").toLowerCase().match(/[a-z]+/g) || []).filter(n => n !== 'and' && n !== 'the');
+  const coveredNames = dir => new Set(FLIGHTS.filter(f => f.dir === dir).flatMap(nameTokens));
+  const covered = { arrival: coveredNames("arrival"), departure: coveredNames("departure") };
+  const custom = asArray(state.customFlights).filter(f => {
+    const ns = nameTokens(f);
+    return !(ns.length && covered[f.dir] && ns.every(n => covered[f.dir].has(n)));
+  });
+  const all = [...FLIGHTS, ...custom];
+  const arrivals = all.filter(f => f.dir === "arrival");
+  const departures = all.filter(f => f.dir === "departure");
+
+  const card = (f) => {
+    const routeLine = (f.from && f.from.code && f.to && f.to.code) ? `<div class="fc-route-line">
+        <div class="fc-node"><div class="fc-code">${esc(f.from.code)}</div><div class="fc-time">${esc(f.from.time || '')}</div></div>
+        <div class="fc-path"></div>
+        <div class="fc-node"><div class="fc-code">${esc(f.to.code)}</div><div class="fc-time">${esc(f.to.time || '')}</div></div>
+      </div>` : "";
+    const tags = [];
+    if (f.cabin) tags.push(`<span class="fc-tag cabin">${esc(f.cabin)}</span>`);
+    if (f.conf)  tags.push(`<span class="fc-tag conf">${esc(f.conf)}</span>`);
+    const delBtn = f.isCustom ? `<button class="fc-del" onclick="deleteCustomFlight('${f.id}')" title="Remove">✕</button>` : "";
+    return `<div class="flight-card ${f.drive ? 'drive' : ''}">
+      <div class="fc-top">
+        <div class="fc-who">${esc(f.who)}</div>
+        <div style="display:flex;align-items:center;gap:6px"><div class="fc-date">${esc(f.date)}</div>${delBtn}</div>
+      </div>
+      ${routeLine}
+      <div class="fc-seg">${esc(f.segments || '')}</div>
+      ${tags.length ? `<div class="fc-tags">${tags.join("")}</div>` : ""}
+      ${f.note ? `<div class="fc-note">${esc(f.note)}</div>` : ""}
+    </div>`;
+  };
+
+  const meName = state.currentUser ? (getParticipant(state.currentUser)?.name || '') : '';
+
+  mount.innerHTML = `<div class="flights-cols">
+    <div>
+      <div class="flights-col-head">Arrivals <span class="fch-count">${arrivals.length}</span></div>
+      ${arrivals.map(card).join("")}
+    </div>
+    <div>
+      <div class="flights-col-head">Departures <span class="fch-count">${departures.length}</span></div>
+      ${departures.map(card).join("")}
+    </div>
+  </div>
+  <div class="user-van-requests">
+    <div class="user-van-head">Add a flight</div>
+    <div class="van-req-form">
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label" for="fl-who">Whose flight</label>
+          <input type="text" id="fl-who" placeholder="e.g. Robert, Gary & Cindy..." value="${esc(meName)}">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="fl-dir">Direction</label>
+          <select id="fl-dir">
+            <option value="arrival">Arrival (into Dublin)</option>
+            <option value="departure">Departure (heading home)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="fl-date">Date</label>
+        <input type="text" id="fl-date" placeholder="e.g. Sat Aug 1">
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label" for="fl-from">From · airport &amp; time</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="fl-from-code" placeholder="ATL" style="width:64px;text-transform:uppercase">
+            <input type="text" id="fl-from-time" placeholder="6:11 PM">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="fl-to">To · airport &amp; time</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="fl-to-code" placeholder="DUB" style="width:64px;text-transform:uppercase">
+            <input type="text" id="fl-to-time" placeholder="10:00 AM">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="fl-seg">Flight details</label>
+        <input type="text" id="fl-seg" placeholder="e.g. DL1478 ATL → DTW, then DL292 DTW → DUB">
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label" for="fl-cabin">Cabin (optional)</label>
+          <input type="text" id="fl-cabin" placeholder="e.g. Economy, Delta One">
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="fl-conf">Confirmation # (optional)</label>
+          <input type="text" id="fl-conf" placeholder="e.g. GLSJEJ">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="fl-note">Notes (optional)</label>
+        <input type="text" id="fl-note" placeholder="Pickup needed? Connecting with anyone?">
+      </div>
+      <button class="submit-btn" onclick="addFlight()">Add Flight</button>
+    </div>
+  </div>`;
+}
+
+function addFlight() {
+  const who = document.getElementById("fl-who").value.trim();
+  const dir = document.getElementById("fl-dir").value;
+  const date = document.getElementById("fl-date").value.trim();
+  const fromCode = document.getElementById("fl-from-code").value.trim().toUpperCase();
+  const fromTime = document.getElementById("fl-from-time").value.trim();
+  const toCode = document.getElementById("fl-to-code").value.trim().toUpperCase();
+  const toTime = document.getElementById("fl-to-time").value.trim();
+  const segments = document.getElementById("fl-seg").value.trim();
+  const cabin = document.getElementById("fl-cabin").value.trim();
+  const conf = document.getElementById("fl-conf").value.trim();
+  const note = document.getElementById("fl-note").value.trim();
+  if (!who || !date) { alert("Please add at least whose flight it is and the date."); return; }
+  state.customFlights = asArray(state.customFlights);
+  state.customFlights.push({
+    id: "fl-" + Date.now(), isCustom: true, dir, who, date,
+    from: { code: fromCode, time: fromTime }, to: { code: toCode, time: toTime },
+    segments, cabin, conf, note, addedBy: state.currentUser || ""
+  });
+  saveState(); syncKey('customFlights');
+  renderFlightsTab();
+}
+
+function deleteCustomFlight(id) {
+  state.customFlights = asArray(state.customFlights).filter(f => f.id !== id);
+  saveState(); syncKey('customFlights');
+  renderFlightsTab();
+}
+
+// ============================================================
+// PEOPLE TAB
+// ============================================================
+function renderPeopleTab() {
+  renderContacts();
+}
+
+function renderContacts() {
+  let mount = document.getElementById("contacts-mount");
+  if (!mount) return;
+  const rows = PARTICIPANTS.map(p =>
+    `<div class="contact-row">
+      <span class="contact-name">${esc(p.name)}</span>
+      <a href="tel:${p.phone.replace(/[^+\d]/g,'')}">${esc(p.phone)}</a>
+    </div>`
+  ).join("");
+  mount.innerHTML = `<div class="contacts-card">
+    <div class="contacts-title">Contacts</div>
+    <div class="contacts-grid">
+      ${rows}
+      <div class="contact-host">Trip host: Jack Sallis, Halcyon Golf Travel · <a href="tel:+447738617466">+44 7738 617466</a> · jack@halcyongolftravel.com</div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// VAN TAB
+// ============================================================
+function renderVanTab() {
+  const container = document.getElementById("van-overview");
+  container.innerHTML = DAYS.map(day => {
+    const allSlots = [
+      ...day.van.map(v => ({time: v.time, desc: v.desc, who: v.who, isGolf: v.desc.toLowerCase().includes("golf")})),
+      ...state.vanRequests.filter(r => r.day === day.id).map(r => ({
+        time: r.time,
+        desc: r.dest,
+        who: `Requested by: ${getParticipant(r.addedBy)?.name || r.addedBy}${r.notes ? " · " + r.notes : ""}`,
+        isGolf: false, isUserReq: true
+      }))
+    ];
+    const slotsHtml = allSlots.map(s =>
+      `<div class="van-slot">
+        <div class="van-slot-time ${s.isGolf ? "golf" : ""}">${s.time}</div>
+        <div><div class="van-slot-info">${s.desc}</div>${s.who ? `<div class="van-slot-who">${s.who}</div>` : ""}</div>
+      </div>`
+    ).join("");
+    return `<div class="van-day-section">
+      <div class="van-day-head">${day.date} — ${day.label}</div>
+      <div class="van-day-body">${slotsHtml || "<div style='font-size:12px;color:var(--ink-faint)'>No scheduled van movements yet</div>"}</div>
+    </div>`;
+  }).join("");
+
+  renderUserReqList();
+}
+
+function addVanRequest() {
+  const day = document.getElementById("req-day").value;
+  const time = document.getElementById("req-time").value.trim();
+  const dest = document.getElementById("req-dest").value.trim();
+  const notes = document.getElementById("req-notes").value.trim();
+  if (!day || !time || !dest) { alert("Please fill in Day, Time, and Destination."); return; }
+  if (!state.currentUser) { alert("Please select your name at the top first!"); return; }
+  state.vanRequests.push({ id: Date.now()+"", day, time, dest, notes, addedBy: state.currentUser });
+  saveState(); syncKey('vanRequests');
+  document.getElementById("req-day").value = "";
+  document.getElementById("req-time").value = "";
+  document.getElementById("req-dest").value = "";
+  document.getElementById("req-notes").value = "";
+  renderVanTab();
+}
+
+function deleteVanRequest(id) {
+  state.vanRequests = state.vanRequests.filter(r => r.id !== id);
+  saveState(); syncKey('vanRequests');
+  renderVanTab();
+}
+
+function renderUserReqList() {
+  const list = document.getElementById("user-req-list");
+  const myReqs = state.vanRequests.filter(r => r.addedBy === state.currentUser);
+  if (!myReqs.length) { list.innerHTML = ""; return; }
+  list.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--ink-faint);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px">Your Requests</div>` +
+    myReqs.map(r => {
+      const dayLabel = DAYS.find(d=>d.id===r.day)?.date || r.day;
+      return `<div class="req-item">
+        <div class="req-info">
+          <div class="req-day">${dayLabel}</div>
+          <div class="req-details">${r.time} · ${r.dest}</div>
+          ${r.notes ? `<div class="req-notes">${r.notes}</div>` : ""}
+        </div>
+        <button class="req-delete" onclick="deleteVanRequest('${r.id}')">✕</button>
+      </div>`;
+    }).join("");
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportState() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ireland-trip-plans-" + (state.currentUser || "shared") + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importStatePrompt() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        const existingIds = new Set(state.vanRequests.map(r=>r.id));
+        const newReqs = (imported.vanRequests || []).filter(r => !existingIds.has(r.id));
+        state.vanRequests = [...state.vanRequests, ...newReqs];
+        const flIds = new Set((state.customFlights||[]).map(f=>f.id));
+        const newFls = (imported.customFlights || []).filter(f => !flIds.has(f.id));
+        state.customFlights = [...(state.customFlights||[]), ...newFls];
+        for (const k of ['userInterests','activityEdits','customActivities','vanOverrides','dayEdits','customMeals']) {
+          if (imported[k]) Object.assign(state[k] || (state[k] = Array.isArray(state[k]) ? [] : {}), imported[k]);
+        }
+        if (imported.hiddenActivities) {
+          state.hiddenActivities = [...new Set([...state.hiddenActivities, ...imported.hiddenActivities])];
+        }
+        if (imported.hiddenMeals) {
+          state.hiddenMeals = [...new Set([...state.hiddenMeals, ...imported.hiddenMeals])];
+        }
+        saveState();
+        SYNCED_KEYS.forEach(k => syncKey(k));
+        renderAll();
+        alert("Plans imported and synced! " + newReqs.length + " new van requests added.");
+      } catch(e) {
+        alert("Error reading file. Make sure it's a valid JSON export.");
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderSchedule();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+if (state.currentUser) {
+  document.getElementById("user-select").value = state.currentUser;
+  document.getElementById("who-name").textContent = PARTICIPANTS.find(p=>p.id===state.currentUser)?.name || state.currentUser;
+} else {
+  showNameOverlay();
+}
+renderAll();
+initFirebase();
+</script>
+<script src="js/cup.js"></script>
+</body>
+</html>
