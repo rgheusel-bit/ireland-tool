@@ -76,10 +76,19 @@
 #cup-tracker .card .rsub{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums;}
 #cup-tracker .card .rsub .pts{font-weight:700; color:var(--ink);}
 #cup-tracker .items{padding:6px 10px 12px;}
-#cup-tracker .item{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 8px; border-radius:var(--radius-sm); flex-wrap:wrap;}
+#cup-tracker .item{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 8px 2px; border-radius:var(--radius-sm); flex-wrap:wrap;}
 #cup-tracker .item + .item{border-top:1px solid var(--hair);}
+#cup-tracker .item + .auto-hint{border-top:none;}
 #cup-tracker .item .lbl{font-size:13.5px; min-width:0;}
 #cup-tracker .item .worth{font-size:10.5px; color:var(--muted); margin-left:7px; letter-spacing:.04em;}
+
+#cup-tracker .round-day-row{display:flex; align-items:center; gap:8px; padding:9px 18px; border-bottom:1px solid var(--hair); font-size:11.5px; color:var(--muted);}
+#cup-tracker .round-day-row label{font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:10px;}
+#cup-tracker .round-day-row select{border:1px solid var(--line); border-radius:7px; padding:4px 8px; font:inherit; font-size:12px; background:#fff; color:var(--ink);}
+#cup-tracker .auto-hint{font-size:11px; color:var(--muted); padding:0 8px 10px; margin-top:-2px;}
+#cup-tracker .auto-hint.matchup-row select{border:1px solid var(--line); border-radius:7px; padding:3px 6px; font:inherit; font-size:11.5px; background:#fff; color:var(--ink); margin:0 3px;}
+#cup-tracker button.apply-btn{appearance:none; border:1px solid var(--green-line); background:var(--green-wash); color:var(--green-2); font:inherit; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; cursor:pointer; margin-left:6px;}
+#cup-tracker button.apply-btn:hover{background:var(--green); color:#fff;}
 
 /* segmented A / halve / B */
 #cup-tracker .seg{display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; background:#fff; flex:0 0 auto;}
