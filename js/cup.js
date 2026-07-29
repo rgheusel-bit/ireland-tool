@@ -163,6 +163,38 @@ const CUP_ROYAL_DUBLIN_HOLES = [
   { num: 17, parMen: 4, siMen: 5, parWomen: 4, siWomen: 3 },
   { num: 18, parMen: 4, siMen: 3, parWomen: 5, siWomen: 12 },
 ];
+// Portstewart Golf Club — Strand Course: full official scorecard (via
+// Google Images / SWING Golf Ireland), real Par + Stroke Index for all
+// 18 holes. Blue/White share one men's Par/SI column; Red has its own
+// women's column — only hole 17 differs in Par by gender (Par 4 for
+// Blue/White, Par 5 for Red), which is why men's total is 72 and
+// women's is 73. This card's Par 72 corrects the Par 71 read off the
+// handicap-calculator app for the same named tees earlier — same
+// situation as Ardglass, kept the app's Rating/Slope, flagged for
+// re-confirmation. Card's own yardages differ meaningfully from the
+// app's for tees sharing a name (e.g. White: 6,606 here vs 6,075 on
+// the app), so these may not be the exact same physical markers —
+// another thing worth the group double-checking on the ground.
+const CUP_PORTSTEWART_HOLES = [
+  { num: 1, parMen: 4, siMen: 11, parWomen: 4, siWomen: 7 },
+  { num: 2, parMen: 4, siMen: 7, parWomen: 4, siWomen: 1 },
+  { num: 3, parMen: 3, siMen: 13, parWomen: 3, siWomen: 17 },
+  { num: 4, parMen: 5, siMen: 5, parWomen: 5, siWomen: 9 },
+  { num: 5, parMen: 4, siMen: 1, parWomen: 4, siWomen: 3 },
+  { num: 6, parMen: 3, siMen: 15, parWomen: 3, siWomen: 13 },
+  { num: 7, parMen: 5, siMen: 17, parWomen: 5, siWomen: 11 },
+  { num: 8, parMen: 4, siMen: 3, parWomen: 4, siWomen: 5 },
+  { num: 9, parMen: 4, siMen: 9, parWomen: 4, siWomen: 15 },
+  { num: 10, parMen: 4, siMen: 10, parWomen: 4, siWomen: 2 },
+  { num: 11, parMen: 4, siMen: 4, parWomen: 4, siWomen: 14 },
+  { num: 12, parMen: 3, siMen: 18, parWomen: 3, siWomen: 18 },
+  { num: 13, parMen: 5, siMen: 16, parWomen: 5, siWomen: 6 },
+  { num: 14, parMen: 5, siMen: 12, parWomen: 5, siWomen: 8 },
+  { num: 15, parMen: 3, siMen: 14, parWomen: 3, siWomen: 16 },
+  { num: 16, parMen: 4, siMen: 6, parWomen: 4, siWomen: 4 },
+  { num: 17, parMen: 4, siMen: 2, parWomen: 5, siWomen: 12 },
+  { num: 18, parMen: 4, siMen: 8, parWomen: 4, siWomen: 10 },
+];
 const CUP_COURSES = {
   // Portmarnock's "Red + Blue Nine" routing (see CUP_PORTMARNOCK_HOLES
   // above) is now confirmed from two independent sources: the
@@ -215,15 +247,22 @@ const CUP_COURSES = {
       { id: 'red', name: 'Red', yardage: 5344, ratingMen: 66.2, slopeMen: 106, parMen: 70, ratingWomen: 71.1, slopeWomen: 118, parWomen: 70 },
     ]
   },
-  aug5: cupRealTeesCourse('Portstewart Golf Club — Strand Course', 71, [
-    { id: 'black', name: 'Black', yardage: 7043, ratingMen: 74.2, slopeMen: 131, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'black-temp', name: 'Black Temp', yardage: 6868, ratingMen: 73.2, slopeMen: 127, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'blue', name: 'Blue', yardage: 6604, ratingMen: 72.6, slopeMen: 127, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'blue-temp', name: 'Blue Temp', yardage: 6429, ratingMen: 71.5, slopeMen: 124, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'white', name: 'White', yardage: 6075, ratingMen: 69.5, slopeMen: 117, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'white-temp', name: 'White Temp', yardage: 5900, ratingMen: 68.7, slopeMen: 114, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'gold', name: 'Gold', yardage: 5730, ratingMen: 68.0, slopeMen: 112, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-  ]),
+  aug5: {
+    name: 'Portstewart Golf Club — Strand Course',
+    teesVerified: true,
+    holesVerified: true,
+    holes: CUP_PORTSTEWART_HOLES,
+    tees: [
+      { id: 'black', name: 'Black', yardage: 7043, ratingMen: 74.2, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'black-temp', name: 'Black Temp', yardage: 6868, ratingMen: 73.2, slopeMen: 127, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'blue', name: 'Blue', yardage: 6604, ratingMen: 72.6, slopeMen: 127, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'blue-temp', name: 'Blue Temp', yardage: 6429, ratingMen: 71.5, slopeMen: 124, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'white', name: 'White', yardage: 6075, ratingMen: 69.5, slopeMen: 117, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'white-temp', name: 'White Temp', yardage: 5900, ratingMen: 68.7, slopeMen: 114, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'gold', name: 'Gold', yardage: 5730, ratingMen: 68.0, slopeMen: 112, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'red', name: 'Red', yardage: 5853, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: null, slopeWomen: null, parWomen: 73 },
+    ]
+  },
   // NOTE: a later screenshot of this same app/course showed a conflicting
   // set of numbers for these same tee names/yardages (Par 72, Green
   // 70.7/127, Black 68.8/123, Black Short 68.6/120) instead of the Par 73
