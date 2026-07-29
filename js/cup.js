@@ -84,8 +84,69 @@ const CUP_RCD_HOLES = [
   { num: 17, parMen: 4, siMen: 10, parWomen: 4, siWomen: 6 },
   { num: 18, parMen: 5, siMen: 6, parWomen: 5, siWomen: 10 },
 ];
+// Ardglass Golf Club — full official scorecard: real Par + Stroke Index
+// for all 18 holes. Unlike RCD, men's (White/Green) and women's (Red)
+// Par are identical hole-for-hole here — only Stroke Index differs.
+// This card's total Par (70) corrected the Par (71/72) that had been
+// read off the handicap-calculator app for these same tees; kept that
+// app's Rating/Slope numbers since Course Rating isn't algebraically
+// tied to Par, but flag them for re-confirmation if precision matters.
+const CUP_ARDGLASS_HOLES = [
+  { num: 1, parMen: 4, siMen: 10, parWomen: 4, siWomen: 10 },
+  { num: 2, parMen: 3, siMen: 14, parWomen: 3, siWomen: 16 },
+  { num: 3, parMen: 4, siMen: 16, parWomen: 4, siWomen: 14 },
+  { num: 4, parMen: 4, siMen: 6, parWomen: 4, siWomen: 6 },
+  { num: 5, parMen: 3, siMen: 18, parWomen: 3, siWomen: 12 },
+  { num: 6, parMen: 4, siMen: 4, parWomen: 4, siWomen: 8 },
+  { num: 7, parMen: 3, siMen: 12, parWomen: 3, siWomen: 18 },
+  { num: 8, parMen: 4, siMen: 2, parWomen: 4, siWomen: 4 },
+  { num: 9, parMen: 5, siMen: 8, parWomen: 5, siWomen: 2 },
+  { num: 10, parMen: 3, siMen: 13, parWomen: 3, siWomen: 17 },
+  { num: 11, parMen: 5, siMen: 3, parWomen: 5, siWomen: 5 },
+  { num: 12, parMen: 3, siMen: 7, parWomen: 3, siWomen: 15 },
+  { num: 13, parMen: 4, siMen: 1, parWomen: 4, siWomen: 9 },
+  { num: 14, parMen: 4, siMen: 11, parWomen: 4, siWomen: 1 },
+  { num: 15, parMen: 5, siMen: 15, parWomen: 5, siWomen: 7 },
+  { num: 16, parMen: 4, siMen: 5, parWomen: 4, siWomen: 11 },
+  { num: 17, parMen: 4, siMen: 9, parWomen: 4, siWomen: 3 },
+  { num: 18, parMen: 4, siMen: 17, parWomen: 4, siWomen: 13 },
+];
+// Portmarnock Golf Club — real Par + Stroke Index for the "Red Nine" +
+// "Blue Nine" 18-hole combination (from a blank competition scorecard;
+// no Rating/Slope printed on it, so tees stay placeholder until that's
+// sourced). NOTE: the club's name wasn't actually printed on this card —
+// inferred from the Red/Blue/Yellow "three nines" naming that's a known
+// signature of Portmarnock's 27-hole layout, and the combined Stroke
+// Index running a clean 1-18 across both nines. Flag to the group to
+// confirm this is the right nine-pairing before trusting it fully.
+const CUP_PORTMARNOCK_HOLES = [
+  { num: 1, parMen: 4, siMen: 7, parWomen: 4, siWomen: 7 },
+  { num: 2, parMen: 4, siMen: 15, parWomen: 4, siWomen: 15 },
+  { num: 3, parMen: 4, siMen: 13, parWomen: 4, siWomen: 13 },
+  { num: 4, parMen: 4, siMen: 1, parWomen: 4, siWomen: 1 },
+  { num: 5, parMen: 4, siMen: 9, parWomen: 4, siWomen: 9 },
+  { num: 6, parMen: 5, siMen: 5, parWomen: 5, siWomen: 5 },
+  { num: 7, parMen: 3, siMen: 17, parWomen: 3, siWomen: 17 },
+  { num: 8, parMen: 4, siMen: 11, parWomen: 4, siWomen: 11 },
+  { num: 9, parMen: 4, siMen: 3, parWomen: 4, siWomen: 3 },
+  { num: 10, parMen: 4, siMen: 12, parWomen: 4, siWomen: 12 },
+  { num: 11, parMen: 4, siMen: 6, parWomen: 4, siWomen: 6 },
+  { num: 12, parMen: 3, siMen: 16, parWomen: 3, siWomen: 16 },
+  { num: 13, parMen: 5, siMen: 14, parWomen: 5, siWomen: 14 },
+  { num: 14, parMen: 4, siMen: 2, parWomen: 4, siWomen: 2 },
+  { num: 15, parMen: 3, siMen: 18, parWomen: 3, siWomen: 18 },
+  { num: 16, parMen: 5, siMen: 8, parWomen: 5, siWomen: 8 },
+  { num: 17, parMen: 4, siMen: 4, parWomen: 4, siWomen: 4 },
+  { num: 18, parMen: 4, siMen: 10, parWomen: 4, siWomen: 10 },
+];
+function cupRealHolesCourse(name, holes, placeholderTeePar) {
+  return {
+    name, teesVerified: false, holesVerified: true, holes,
+    tees: [{ id: 'placeholder', name: '(placeholder tee — rating/slope not yet sourced)', ratingMen: 72.0, slopeMen: 125, parMen: placeholderTeePar, ratingWomen: 74.0, slopeWomen: 125, parWomen: placeholderTeePar }]
+  };
+}
 const CUP_COURSES = {
-  aug2: cupPlaceholderCourse('Portmarnock Golf Club', 71),
+  aug2: cupRealHolesCourse('Portmarnock Golf Club (unconfirmed — "Red + Blue Nine" combination)', CUP_PORTMARNOCK_HOLES, 72),
   aug3: {
     name: 'Royal County Down — Championship Course',
     teesVerified: true,
@@ -99,11 +160,17 @@ const CUP_COURSES = {
       { id: 'red', name: 'Red', yardage: 6249, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: 79.4, slopeWomen: 151, parWomen: 76 },
     ]
   },
-  aug4: cupRealTeesCourse('Ardglass Golf Club', 71, [
-    { id: 'white', name: 'White', yardage: 6301, ratingMen: 70.6, slopeMen: 118, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'green', name: 'Green', yardage: 5883, ratingMen: 68.6, slopeMen: 114, parMen: 71, ratingWomen: 73.9, slopeWomen: 123, parWomen: 72 },
-    { id: 'red', name: 'Red', yardage: 5410, ratingMen: 66.2, slopeMen: 106, parMen: 71, ratingWomen: 71.1, slopeWomen: 118, parWomen: 71 },
-  ]),
+  aug4: {
+    name: 'Ardglass Golf Club',
+    teesVerified: true,
+    holesVerified: true,
+    holes: CUP_ARDGLASS_HOLES,
+    tees: [
+      { id: 'white', name: 'White', yardage: 6268, ratingMen: 70.6, slopeMen: 118, parMen: 70, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'green', name: 'Green', yardage: 5814, ratingMen: 68.6, slopeMen: 114, parMen: 70, ratingWomen: 73.9, slopeWomen: 123, parWomen: 70 },
+      { id: 'red', name: 'Red', yardage: 5344, ratingMen: 66.2, slopeMen: 106, parMen: 70, ratingWomen: 71.1, slopeWomen: 118, parWomen: 70 },
+    ]
+  },
   aug5: cupRealTeesCourse('Portstewart Golf Club — Strand Course', 71, [
     { id: 'black', name: 'Black', yardage: 7043, ratingMen: 74.2, slopeMen: 131, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
     { id: 'black-temp', name: 'Black Temp', yardage: 6868, ratingMen: 73.2, slopeMen: 127, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -698,6 +765,7 @@ function renderCupHcpPanel() {
     let flagText;
     if (course.teesVerified && course.holesVerified) flagText = null;
     else if (course.teesVerified) flagText = 'real tee ratings — per-hole stroke index still placeholder';
+    else if (course.holesVerified) flagText = 'real per-hole Par/Stroke Index — tee ratings still placeholder';
     else flagText = 'placeholder tee ratings and stroke index';
     const flag = flagText ? ` <span style="font-weight:500;color:var(--brass);font-size:11px">(${flagText})</span>` : ' <span style="font-weight:600;color:var(--green);font-size:11px">(verified)</span>';
     return `<div class="hcp-round-block">
