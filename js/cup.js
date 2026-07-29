@@ -139,6 +139,30 @@ const CUP_PORTMARNOCK_HOLES = [
   { num: 17, parMen: 4, siMen: 4, parWomen: 4, siWomen: 4 },
   { num: 18, parMen: 4, siMen: 10, parWomen: 4, siWomen: 10 },
 ];
+// The Royal Dublin Golf Club — full official scorecard: real Par +
+// Stroke Index for all 18 holes, separately for men's (Blue/White/
+// Yellow) and women's (Red) tees — 6 holes play a different Par by
+// gender, which is why men's total is 72 and women's 74.
+const CUP_ROYAL_DUBLIN_HOLES = [
+  { num: 1, parMen: 4, siMen: 10, parWomen: 4, siWomen: 6 },
+  { num: 2, parMen: 5, siMen: 17, parWomen: 5, siWomen: 13 },
+  { num: 3, parMen: 4, siMen: 8, parWomen: 4, siWomen: 17 },
+  { num: 4, parMen: 3, siMen: 13, parWomen: 3, siWomen: 9 },
+  { num: 5, parMen: 4, siMen: 2, parWomen: 5, siWomen: 16 },
+  { num: 6, parMen: 5, siMen: 9, parWomen: 5, siWomen: 5 },
+  { num: 7, parMen: 3, siMen: 15, parWomen: 3, siWomen: 15 },
+  { num: 8, parMen: 4, siMen: 6, parWomen: 4, siWomen: 7 },
+  { num: 9, parMen: 3, siMen: 16, parWomen: 3, siWomen: 10 },
+  { num: 10, parMen: 4, siMen: 1, parWomen: 4, siWomen: 1 },
+  { num: 11, parMen: 5, siMen: 11, parWomen: 5, siWomen: 14 },
+  { num: 12, parMen: 3, siMen: 14, parWomen: 3, siWomen: 8 },
+  { num: 13, parMen: 4, siMen: 7, parWomen: 5, siWomen: 11 },
+  { num: 14, parMen: 5, siMen: 12, parWomen: 4, siWomen: 2 },
+  { num: 15, parMen: 4, siMen: 4, parWomen: 4, siWomen: 4 },
+  { num: 16, parMen: 4, siMen: 18, parWomen: 4, siWomen: 18 },
+  { num: 17, parMen: 4, siMen: 5, parWomen: 4, siWomen: 3 },
+  { num: 18, parMen: 4, siMen: 3, parWomen: 5, siWomen: 12 },
+];
 function cupRealHolesCourse(name, holes, placeholderTeePar) {
   return {
     name, teesVerified: false, holesVerified: true, holes,
@@ -193,7 +217,33 @@ const CUP_COURSES = {
     { id: 'black-short', name: 'Black Short', yardage: 5888, ratingMen: 75.6, slopeMen: 138, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
     { id: 'black', name: 'Black', yardage: 5950, ratingMen: 75.3, slopeMen: 136, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
   ]),
-  aug7: cupPlaceholderCourse('Royal Dublin Golf Club', 72),
+  aug7: {
+    name: 'The Royal Dublin Golf Club',
+    teesVerified: true,
+    holesVerified: true,
+    // Real Par + Stroke Index for all 18 holes from the official card
+    // (Blue/White/Yellow share one men's Par/SI column, Red has its
+    // own women's column — verified both SI columns are clean 1-18
+    // permutations and Par sums match the printed 72/74 totals).
+    holes: CUP_ROYAL_DUBLIN_HOLES,
+    // NOTE: the handicap-calculator app's tee names (Black/White/
+    // Shamrock A/Shamrock B/Blue/Green) don't match the scorecard's
+    // own names (Blue/White/Yellow/Red) for what look like the same
+    // physical tees by yardage — kept each source's own naming rather
+    // than guess a mapping. Par/SI above applies to all of them since
+    // it's a course-and-hole property, not tee-specific. No women's
+    // Rating/Slope was found for the Red tee, only its Par/yardage
+    // from the scorecard.
+    tees: [
+      { id: 'black', name: 'Black', yardage: 7289, ratingMen: 76.2, slopeMen: 139, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'white', name: 'White', yardage: 6925, ratingMen: 74.6, slopeMen: 134, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'shamrock-a', name: 'Shamrock A', yardage: 6720, ratingMen: 73.6, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'shamrock-b', name: 'Shamrock B', yardage: 6689, ratingMen: 73.5, slopeMen: 134, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'blue', name: 'Blue', yardage: 6484, ratingMen: 72.4, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'green', name: 'Green', yardage: 5511, ratingMen: 67.7, slopeMen: 122, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'red', name: 'Red', yardage: 5987, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: null, slopeWomen: null, parWomen: 74 },
+    ]
+  },
 };
 
 // ============================================================
