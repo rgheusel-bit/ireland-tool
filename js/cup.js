@@ -163,14 +163,34 @@ const CUP_ROYAL_DUBLIN_HOLES = [
   { num: 17, parMen: 4, siMen: 5, parWomen: 4, siWomen: 3 },
   { num: 18, parMen: 4, siMen: 3, parWomen: 5, siWomen: 12 },
 ];
-function cupRealHolesCourse(name, holes, placeholderTeePar) {
-  return {
-    name, teesVerified: false, holesVerified: true, holes,
-    tees: [{ id: 'placeholder', name: '(placeholder tee — rating/slope not yet sourced)', ratingMen: 72.0, slopeMen: 125, parMen: placeholderTeePar, ratingWomen: 74.0, slopeWomen: 125, parWomen: placeholderTeePar }]
-  };
-}
 const CUP_COURSES = {
-  aug2: cupRealHolesCourse('Portmarnock Golf Club (unconfirmed — "Red + Blue Nine" combination)', CUP_PORTMARNOCK_HOLES, 72),
+  // Portmarnock's "Red + Blue Nine" routing (see CUP_PORTMARNOCK_HOLES
+  // above) is now confirmed from two independent sources: the
+  // competition scorecard used for its per-hole Par/SI, and this
+  // handicap-calculator app's own course entry "Portmarnock Golf Club /
+  // Red", whose tee list includes matching "- Red/Blue" suffixed tees
+  // at the same Par 72 total. Only kept the "- Red/Blue" tees, not the
+  // app's unsuffixed Blue/White/Green/Yellow entries — those likely
+  // represent a different nine-pairing we don't have hole-by-hole data
+  // for, so mixing them in here would apply the wrong Stroke Index
+  // allocation. Women's Par varies by tee here (72/73) in a way that
+  // isn't reflected per-hole (CUP_PORTMARNOCK_HOLES currently mirrors
+  // men's Par for women on every hole) since the exact hole(s) that
+  // reclassify aren't known — Course Handicap is accurate, per-hole
+  // Stableford for a women's-tee golfer is an approximation until that's
+  // pinned down.
+  aug2: {
+    name: 'Portmarnock Golf Club — Red + Blue Nine',
+    teesVerified: true,
+    holesVerified: true,
+    holes: CUP_PORTMARNOCK_HOLES,
+    tees: [
+      { id: 'blue-red-blue', name: 'Blue', yardage: 7470, ratingMen: 77.1, slopeMen: 143, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'white-red-blue', name: 'White', yardage: 6941, ratingMen: 74.7, slopeMen: 137, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'green-red-blue', name: 'Green', yardage: 6691, ratingMen: 73.6, slopeMen: 135, parMen: 72, ratingWomen: 79.9, slopeWomen: 147, parWomen: 73 },
+      { id: 'yellow-red-blue', name: 'Yellow', yardage: 5828, ratingMen: 69.5, slopeMen: 125, parMen: 72, ratingWomen: 74.9, slopeWomen: 136, parWomen: 72 },
+    ]
+  },
   aug3: {
     name: 'Royal County Down — Championship Course',
     teesVerified: true,
