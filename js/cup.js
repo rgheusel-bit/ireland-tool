@@ -7,10 +7,15 @@
    so its onclick-referenced functions stay callable from HTML
    strings, same convention as the rest of index.html.
 
-   Course data (CUP_COURSES) is PLACEHOLDER until real scorecards
-   are provided — every course is flagged `verified:false` and the
-   UI shows a persistent warning. Swap in real par/stroke-index/
-   rating/slope numbers once available; nothing else needs to change.
+   Course data (CUP_COURSES) has two independent accuracy flags per
+   course: `teesVerified` (Course Rating/Slope/Par per tee — real once
+   sourced from an actual handicap-calculator/scorecard) and
+   `holesVerified` (per-hole Par/Stroke-Index — still placeholder for
+   every course as of this writing, since that needs an actual
+   scorecard photo/PDF, not just a tee-rating lookup). The UI flags
+   whichever parts are still unverified. Swap in real per-hole data
+   the same way the real tees were added below; nothing else needs to
+   change.
    ============================================================ */
 
 // ============================================================
@@ -23,30 +28,60 @@ const RANK_PTS = [10, 8, 6, 5, 4, 3];
 const CUP_CLINCH = 9.5, CUP_TOTAL = 18;
 
 // ============================================================
-// COURSE DATA — PLACEHOLDER, NOT REAL SCORECARDS
+// COURSE DATA
 // ============================================================
-function cupPlaceholderCourse(name) {
+// Per-hole Par/Stroke-Index is placeholder for every course (a generic
+// 10x par-4/4x par-3/4x par-5 distribution nudged to the real total
+// par, SI just assigned in hole order) until real hole-by-hole data
+// is added — that's `holesVerified: false` throughout.
+function cupHolePlaceholder(par) {
   const parsFront = [4, 4, 3, 5, 4, 4, 3, 5, 4];
   const parsBack = [4, 3, 5, 4, 4, 3, 5, 4, 4];
   const pars = parsFront.concat(parsBack);
-  const holes = pars.map((par, i) => ({ num: i + 1, par, siMen: i + 1, siWomen: i + 1 }));
+  const adjust = par - pars.reduce((a, b) => a + b, 0);
+  if (adjust) pars[0] += adjust;
+  return pars.map((p, i) => ({ num: i + 1, par: p, siMen: i + 1, siWomen: i + 1 }));
+}
+function cupPlaceholderCourse(name, par) {
+  par = par || 72;
   return {
-    name,
-    verified: false,
-    par: pars.reduce((a, b) => a + b, 0),
-    holes,
+    name, teesVerified: false, holesVerified: false,
+    holes: cupHolePlaceholder(par),
     tees: [
-      { id: 'placeholder', name: '(placeholder tee — replace me)', ratingMen: 72.0, slopeMen: 125, ratingWomen: 74.0, slopeWomen: 125 }
+      { id: 'placeholder', name: '(placeholder tee — replace me)', ratingMen: 72.0, slopeMen: 125, parMen: par, ratingWomen: 74.0, slopeWomen: 125, parWomen: par }
     ]
   };
 }
+// Real Course Rating/Slope/Par per tee, sourced from a handicap-
+// calculator app's tee list (screenshots from the trip organizer).
+// Hole-by-hole Par/SI still isn't known for any course, so `holes`
+// stays a placeholder distribution nudged to the real total par.
+function cupRealTeesCourse(name, holePar, tees) {
+  return { name, teesVerified: true, holesVerified: false, holes: cupHolePlaceholder(holePar), tees };
+}
 const CUP_COURSES = {
-  aug2: cupPlaceholderCourse('Portmarnock Golf Club'),
-  aug3: cupPlaceholderCourse('Royal County Down — Championship Course'),
-  aug4: cupPlaceholderCourse('Ardglass Golf Club'),
-  aug5: cupPlaceholderCourse('Portstewart Golf Club — Strand Course'),
-  aug6: cupPlaceholderCourse('Royal Portrush Golf Club — Dunluce Course'),
-  aug7: cupPlaceholderCourse('Royal Dublin Golf Club'),
+  aug2: cupPlaceholderCourse('Portmarnock Golf Club', 71),
+  aug3: cupPlaceholderCourse('Royal County Down — Championship Course', 71),
+  aug4: cupRealTeesCourse('Ardglass Golf Club', 71, [
+    { id: 'white', name: 'White', yardage: 6301, ratingMen: 70.6, slopeMen: 118, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'green', name: 'Green', yardage: 5883, ratingMen: 68.6, slopeMen: 114, parMen: 71, ratingWomen: 73.9, slopeWomen: 123, parWomen: 72 },
+    { id: 'red', name: 'Red', yardage: 5410, ratingMen: 66.2, slopeMen: 106, parMen: 71, ratingWomen: 71.1, slopeWomen: 118, parWomen: 71 },
+  ]),
+  aug5: cupRealTeesCourse('Portstewart Golf Club — Strand Course', 71, [
+    { id: 'black', name: 'Black', yardage: 7043, ratingMen: 74.2, slopeMen: 131, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'black-temp', name: 'Black Temp', yardage: 6868, ratingMen: 73.2, slopeMen: 127, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'blue', name: 'Blue', yardage: 6604, ratingMen: 72.6, slopeMen: 127, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'blue-temp', name: 'Blue Temp', yardage: 6429, ratingMen: 71.5, slopeMen: 124, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'white', name: 'White', yardage: 6075, ratingMen: 69.5, slopeMen: 117, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'white-temp', name: 'White Temp', yardage: 5900, ratingMen: 68.7, slopeMen: 114, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'gold', name: 'Gold', yardage: 5730, ratingMen: 68.0, slopeMen: 112, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+  ]),
+  aug6: cupRealTeesCourse('Royal Portrush Golf Club — Dunluce Course', 73, [
+    { id: 'green', name: 'Green', yardage: 6353, ratingMen: 77.8, slopeMen: 139, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'black-short', name: 'Black Short', yardage: 5888, ratingMen: 75.6, slopeMen: 138, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
+    { id: 'black', name: 'Black', yardage: 5950, ratingMen: 75.3, slopeMen: 136, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
+  ]),
+  aug7: cupPlaceholderCourse('Royal Dublin Golf Club', 72),
 };
 
 // ============================================================
@@ -149,12 +184,17 @@ function cupResolvedPerson(playerId, dayId) {
 // HANDICAP MATHS
 // ============================================================
 // WHS Course Handicap = round(Handicap Index x (Slope/113) + (Course Rating - Par))
-function cupCourseHandicap(hi, course, tee, ratingSet) {
-  if (hi == null || hi === '' || !course || !tee) return null;
+// Rating/Slope/Par all come from the golfer's tee + rating set (men's/
+// women's) — Ardglass's Green tee, for instance, is Par 71 for men but
+// Par 72 for women off the same physical tee, so Par has to be looked
+// up per tee+gender, not assumed to be one course-wide number.
+function cupCourseHandicap(hi, tee, ratingSet) {
+  if (hi == null || hi === '' || !tee) return null;
   const rating = ratingSet === 'women' ? tee.ratingWomen : tee.ratingMen;
   const slope = ratingSet === 'women' ? tee.slopeWomen : tee.slopeMen;
-  if (rating == null || slope == null) return null;
-  return Math.round(Number(hi) * (slope / 113) + (rating - course.par));
+  const par = ratingSet === 'women' ? tee.parWomen : tee.parMen;
+  if (rating == null || slope == null || par == null) return null;
+  return Math.round(Number(hi) * (slope / 113) + (rating - par));
 }
 function cupCourseHandicapFor(personId, dayId) {
   const course = CUP_COURSES[dayId]; if (!course || !personId) return null;
@@ -162,7 +202,7 @@ function cupCourseHandicapFor(personId, dayId) {
   if (!profile || profile.handicapIndex == null || profile.handicapIndex === '') return null;
   const teeId = state.cup.teeSelections[dayId] && state.cup.teeSelections[dayId][personId];
   const tee = course.tees.find(t => t.id === teeId) || course.tees[0];
-  return cupCourseHandicap(profile.handicapIndex, course, tee, profile.ratingSet || 'men');
+  return cupCourseHandicap(profile.handicapIndex, tee, profile.ratingSet || 'men');
 }
 // Strokes received on a given hole from a Course Handicap + that hole's Stroke Index.
 // Handles the >18 overflow (2nd stroke on hardest holes) and plus-handicap give-back
@@ -608,8 +648,11 @@ function renderCupHcpPanel() {
         <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${ch != null ? ch : '—'}</td>
       </tr>`;
     }).join('');
+    const flag = !course.teesVerified
+      ? ' <span style="font-weight:500;color:var(--brass);font-size:11px">(placeholder tee ratings)</span>'
+      : ' <span style="font-weight:500;color:var(--brass);font-size:11px">(real tee ratings — per-hole stroke index still placeholder)</span>';
     return `<div class="hcp-round-block">
-      <div class="hcp-round-title">${esc(day.date.replace(/\(.*\)/, '').trim())} — ${esc(course.name)}${!course.verified ? ' <span style="font-weight:500;color:var(--brass);font-size:11px">(placeholder data)</span>' : ''}</div>
+      <div class="hcp-round-title">${esc(day.date.replace(/\(.*\)/, '').trim())} — ${esc(course.name)}${flag}</div>
       <div class="hcp-table-wrap"><table class="hcp">
         <thead><tr><th>Golfer</th><th>Tee</th><th>Rating / Slope</th><th>Course HCP</th></tr></thead>
         <tbody>${rows}</tbody>
