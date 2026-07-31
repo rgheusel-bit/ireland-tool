@@ -1240,22 +1240,101 @@ let state = {
   scheduleFilter: "",
 };
 
+// ============================================================
+// PERSISTENCE
+// Scores are written to this device on every single tap, so locking the
+// phone, switching apps or closing the browser mid-round never loses
+// anything. A second copy is kept under a backup key purely so an
+// unreadable primary (interrupted write, storage corruption) can still
+// be recovered from, and a save that genuinely fails — a full or
+// disabled localStorage, which is what private browsing looks like —
+// says so out loud instead of pretending it worked.
+// ============================================================
+const STORE_KEY = "irelandTrip2026";
+const STORE_BACKUP_KEY = "irelandTrip2026-backup";
+let lastSavedAt = null;
+let storageFailureAnnounced = false;
+
+function parseStoredState(raw) {
+  if (!raw) return null;
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not a state object");
+  return parsed;
+}
+
 function loadState() {
+  let loaded = null;
   try {
-    const saved = localStorage.getItem("irelandTrip2026");
-    if (saved) Object.assign(state, JSON.parse(saved));
+    loaded = parseStoredState(localStorage.getItem(STORE_KEY));
+  } catch(e) {
+    console.warn("Saved data unreadable, trying backup:", e);
+  }
+  if (!loaded) {
+    try {
+      loaded = parseStoredState(localStorage.getItem(STORE_BACKUP_KEY));
+      if (loaded) console.warn("Recovered from backup copy.");
+    } catch(e) { console.warn("Backup unreadable too:", e); }
+  }
+  if (loaded) {
+    Object.assign(state, loaded);
     if (state.currentUser && state.activities && Object.keys(state.activities).length) {
       if (!state.userInterests[state.currentUser]) {
         state.userInterests[state.currentUser] = Object.assign({}, state.activities);
       }
     }
-  } catch(e) {}
+  }
   normalizeArrayKeys();
 }
 
 function saveState() {
-  try { localStorage.setItem("irelandTrip2026", JSON.stringify(state)); } catch(e) {}
+  let payload;
+  try {
+    payload = JSON.stringify(state);
+  } catch(e) {
+    console.error("Could not serialise state:", e);
+    announceStorageFailure();
+    return false;
+  }
+  let saved = false;
+  try {
+    localStorage.setItem(STORE_KEY, payload);
+    saved = true;
+  } catch(e) {
+    // Most likely the quota is full. Drop the backup to make room and
+    // retry once — a current primary matters more than a stale spare.
+    try {
+      localStorage.removeItem(STORE_BACKUP_KEY);
+      localStorage.setItem(STORE_KEY, payload);
+      saved = true;
+    } catch(e2) {
+      console.error("Save failed:", e2);
+    }
+  }
+  if (!saved) { announceStorageFailure(); return false; }
+  lastSavedAt = Date.now();
+  storageFailureAnnounced = false;
+  try { localStorage.setItem(STORE_BACKUP_KEY, payload); } catch(e) { /* spare copy only */ }
+  return true;
 }
+
+function announceStorageFailure() {
+  if (storageFailureAnnounced) return;
+  storageFailureAnnounced = true;
+  showToast("⚠️ This phone won't save scores — screenshot anything you've entered");
+}
+
+// contenteditable notes and the handicap field only commit when they lose
+// focus, so a phone locked mid-edit would drop that last change. Blur
+// first, then save, whenever the page is backgrounded or torn down.
+function flushPendingEdits() {
+  const el = document.activeElement;
+  if (el && el !== document.body && typeof el.blur === "function") el.blur();
+  saveState();
+}
+document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "hidden") flushPendingEdits();
+});
+window.addEventListener("pagehide", flushPendingEdits);
 
 // ============================================================
 // FIREBASE REAL-TIME SYNC

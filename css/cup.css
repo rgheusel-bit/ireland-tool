@@ -207,6 +207,7 @@
 #cup-tracker .lsr-pending-hint{font-size:10px; color:var(--ink-faint); font-style:italic;}
 #cup-tracker .lsr-result{width:64px; text-align:right; font-size:11px; color:var(--ink-soft); flex-shrink:0;}
 #cup-tracker .lsr-result b{display:block; font-size:13px; color:var(--ink);}
+#cup-tracker .save-state{font-size:11px; color:var(--ink-faint); text-align:center; margin:-8px 0 16px;}
 #cup-tracker .live-leaderboard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:10px 8px;}
 #cup-tracker .live-leaderboard h3{font-family:var(--display); font-weight:600; font-size:1rem; margin:6px 10px 8px;}
 #cup-tracker .llb-row{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:10px; padding:8px 12px;}

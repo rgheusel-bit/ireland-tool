@@ -125,6 +125,12 @@ const CUP_PORTMARNOCK_HOLES = [
 // Stroke Index for all 18 holes, separately for men's (Blue/White/
 // Yellow) and women's (Red) tees — 6 holes play a different Par by
 // gender, which is why men's total is 72 and women's 74.
+// The women's column on that card is the Red tee. A women's-tee golfer
+// defaulting to the shortest tee lands on Green instead, which is par
+// 73 — so exactly one hole plays a shot shorter than the parWomen
+// values below, worth about one Stableford point over a round. Getting
+// Green's own per-hole par would close the gap; playing Red instead
+// matches the card exactly.
 const CUP_ROYAL_DUBLIN_HOLES = [
   { num: 1, parMen: 4, siMen: 10, parWomen: 4, siWomen: 6 },
   { num: 2, parMen: 5, siMen: 17, parWomen: 5, siWomen: 13 },
@@ -293,17 +299,23 @@ const CUP_COURSES = {
     // own names (Blue/White/Yellow/Red) for what look like the same
     // physical tees by yardage — kept each source's own naming rather
     // than guess a mapping. Par/SI above applies to all of them since
-    // it's a course-and-hole property, not tee-specific. No women's
-    // Rating/Slope was found for the Red tee, only its Par/yardage
-    // from the scorecard.
+    // it's a course-and-hole property, not tee-specific.
+    // Women's ratings exist for Red and Green. Green carries both sets
+    // off the same 5,511-yard markers (men 67.7/122 par 72, women
+    // 73.5/128 par 73) — that pair is what identified the second
+    // screenshot as women's data rather than another men's list.
+    // Listed longest-first, which also puts Red ahead of Green so a
+    // women's-tee golfer defaults to Red: its par 74 matches the
+    // per-hole parWomen above exactly, whereas Green's par 73 would
+    // differ from the card on one hole.
     tees: [
       { id: 'black', name: 'Black', yardage: 7289, ratingMen: 76.2, slopeMen: 139, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
       { id: 'white', name: 'White', yardage: 6925, ratingMen: 74.6, slopeMen: 134, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
       { id: 'shamrock-a', name: 'Shamrock A', yardage: 6720, ratingMen: 73.6, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
       { id: 'shamrock-b', name: 'Shamrock B', yardage: 6689, ratingMen: 73.5, slopeMen: 134, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
       { id: 'blue', name: 'Blue', yardage: 6484, ratingMen: 72.4, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
-      { id: 'green', name: 'Green', yardage: 5511, ratingMen: 67.7, slopeMen: 122, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
-      { id: 'red', name: 'Red', yardage: 5987, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: null, slopeWomen: null, parWomen: 74 },
+      { id: 'red', name: 'Red', yardage: 5980, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: 75.9, slopeWomen: 136, parWomen: 74 },
+      { id: 'green', name: 'Green', yardage: 5511, ratingMen: 67.7, slopeMen: 122, parMen: 72, ratingWomen: 73.5, slopeWomen: 128, parWomen: 73 },
     ]
   },
 };
@@ -457,12 +469,25 @@ function cupTeeIsRatedFor(tee, ratingSet) {
   const par = ratingSet === 'women' ? tee.parWomen : tee.parMen;
   return rating != null && slope != null && par != null;
 }
-// Which tee a golfer is on if they haven't picked one. Not simply the
-// first tee: several courses list their back tees with men's ratings
-// only, so a women's-tee golfer defaulted there would silently get no
-// Course Handicap at all. Prefer the first tee actually rated for them.
+// Which tee a golfer is on if they haven't picked one. Only ever a tee
+// actually rated for them — several courses rate their back tees for men
+// only, and defaulting a women's-tee golfer there leaves her with no
+// Course Handicap at all. Beyond that: men default to whichever everyday
+// tee sits closest to 6,200–6,500 yards, women to the shortest tee.
+const CUP_MEN_TEE_TARGET = [6200, 6500];
 function cupDefaultTeeFor(course, ratingSet) {
-  return course.tees.find(t => cupTeeIsRatedFor(t, ratingSet)) || course.tees[0];
+  const rated = course.tees.filter(t => cupTeeIsRatedFor(t, ratingSet));
+  if (!rated.length) return course.tees[0];
+  if (ratingSet === 'women') {
+    return rated.reduce((a, b) => (b.yardage == null ? Infinity : b.yardage) < (a.yardage == null ? Infinity : a.yardage) ? b : a);
+  }
+  // "Temp" tees are course-works setups, not a tee anyone chooses to
+  // play — skip them when auto-picking, but leave them selectable.
+  const everyday = rated.filter(t => !/temp/i.test(t.name));
+  const pool = everyday.length ? everyday : rated;
+  const [lo, hi] = CUP_MEN_TEE_TARGET;
+  const distance = t => t.yardage == null ? Infinity : (t.yardage < lo ? lo - t.yardage : (t.yardage > hi ? t.yardage - hi : 0));
+  return pool.reduce((a, b) => distance(b) < distance(a) ? b : a);
 }
 function cupTeeFor(personId, dayId) {
   const course = CUP_COURSES[dayId]; if (!course || !personId) return null;
@@ -1029,6 +1054,14 @@ function cupClearGross(dayId, pid, hole) {
   }
 }
 
+// Reassurance for the person keeping score in a field with no signal:
+// every tap is already on the phone, whatever the sync dot is doing.
+function cupSaveStatusText() {
+  if (typeof lastSavedAt === 'undefined' || lastSavedAt == null) return 'Scores save to this phone as you enter them.';
+  const t = new Date(lastSavedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `Saved on this phone at ${t} — safe to lock the screen or close the tab.`;
+}
+
 function cupLiveLeaderboardHtml(dayId) {
   const day = DAYS.find(d => d.id === dayId);
   if (!day || !day.golf) return '';
@@ -1124,6 +1157,7 @@ function renderCupLivePanel() {
     </div>
     <div class="hole-nav-jump">${jumpStrip}</div>
     <div class="live-score-rows">${scoreRows}</div>
+    <div class="save-state">${cupSaveStatusText()}</div>
     ${cupLiveLeaderboardHtml(dayId)}`;
 }
 
