@@ -30,35 +30,11 @@ const CUP_CLINCH = 9.5, CUP_TOTAL = 18;
 // ============================================================
 // COURSE DATA
 // ============================================================
-// Per-hole Par/Stroke-Index is placeholder for every course (a generic
-// 10x par-4/4x par-3/4x par-5 distribution nudged to the real total
-// par, SI just assigned in hole order) until real hole-by-hole data
-// is added — that's `holesVerified: false` throughout.
-function cupHolePlaceholder(par) {
-  const parsFront = [4, 4, 3, 5, 4, 4, 3, 5, 4];
-  const parsBack = [4, 3, 5, 4, 4, 3, 5, 4, 4];
-  const pars = parsFront.concat(parsBack);
-  const adjust = par - pars.reduce((a, b) => a + b, 0);
-  if (adjust) pars[0] += adjust;
-  return pars.map((p, i) => ({ num: i + 1, parMen: p, parWomen: p, siMen: i + 1, siWomen: i + 1 }));
-}
-function cupPlaceholderCourse(name, par) {
-  par = par || 72;
-  return {
-    name, teesVerified: false, holesVerified: false,
-    holes: cupHolePlaceholder(par),
-    tees: [
-      { id: 'placeholder', name: '(placeholder tee — replace me)', ratingMen: 72.0, slopeMen: 125, parMen: par, ratingWomen: 74.0, slopeWomen: 125, parWomen: par }
-    ]
-  };
-}
-// Real Course Rating/Slope/Par per tee, sourced from a handicap-
-// calculator app's tee list (screenshots from the trip organizer).
-// Hole-by-hole Par/SI still isn't known for any course, so `holes`
-// stays a placeholder distribution nudged to the real total par.
-function cupRealTeesCourse(name, holePar, tees) {
-  return { name, teesVerified: true, holesVerified: false, holes: cupHolePlaceholder(holePar), tees };
-}
+// All 6 courses now have real, sourced Par/Stroke-Index for every hole
+// and real tee Rating/Slope/Par — teesVerified/holesVerified stay on
+// each course object as a record of that, and to make it obvious in
+// code (and the UI) if a course ever needs to fall back to placeholder
+// data again.
 // Royal County Down — full official scorecard (mournegolfclub.com PDF):
 // real Par + Stroke Index for all 18 holes, separately for the men's
 // tees (Blue/White/Yellow/Green share one Par/SI column) and the
@@ -195,6 +171,41 @@ const CUP_PORTSTEWART_HOLES = [
   { num: 17, parMen: 4, siMen: 2, parWomen: 5, siWomen: 12 },
   { num: 18, parMen: 4, siMen: 8, parWomen: 4, siWomen: 10 },
 ];
+// Royal Portrush Golf Club — Dunluce Course: full official scorecard
+// (club crest, user-confirmed authentic), superseding two earlier
+// conflicting screenshots entirely — this is a third, different tee
+// set (White/Green/Bronze) with its own Par/Rating/Slope, not a
+// resolution in favor of either previous guess. No gender split is
+// shown on this card at all (one shared Par/SI column for everyone),
+// unlike every other course here.
+// One real wrinkle this model can't fully capture: hole 11's Par
+// differs BY TEE, not by gender — Par 5 from White/Green, Par 4 from
+// the shorter Bronze tee (that's why White/Green total 72 but Bronze
+// totals 71). Since holes[] only splits Par by rating-set (men/women),
+// not by which specific tee within a gender, hole 11 is recorded as
+// Par 5 (matching White/Green) — a Bronze-tee golfer's Stableford on
+// that one hole will be computed a stroke off from their tee's actual
+// par until the model supports per-tee par.
+const CUP_ROYAL_PORTRUSH_HOLES = [
+  { num: 1, parMen: 4, siMen: 7, parWomen: 4, siWomen: 7 },
+  { num: 2, parMen: 5, siMen: 13, parWomen: 5, siWomen: 13 },
+  { num: 3, parMen: 3, siMen: 17, parWomen: 3, siWomen: 17 },
+  { num: 4, parMen: 4, siMen: 1, parWomen: 4, siWomen: 1 },
+  { num: 5, parMen: 4, siMen: 15, parWomen: 4, siWomen: 15 },
+  { num: 6, parMen: 3, siMen: 11, parWomen: 3, siWomen: 11 },
+  { num: 7, parMen: 5, siMen: 5, parWomen: 5, siWomen: 5 },
+  { num: 8, parMen: 4, siMen: 9, parWomen: 4, siWomen: 9 },
+  { num: 9, parMen: 4, siMen: 3, parWomen: 4, siWomen: 3 },
+  { num: 10, parMen: 4, siMen: 16, parWomen: 4, siWomen: 16 },
+  { num: 11, parMen: 5, siMen: 8, parWomen: 5, siWomen: 8 }, // Par 4 from the Bronze tee — see note above
+  { num: 12, parMen: 5, siMen: 12, parWomen: 5, siWomen: 12 },
+  { num: 13, parMen: 3, siMen: 18, parWomen: 3, siWomen: 18 },
+  { num: 14, parMen: 4, siMen: 2, parWomen: 4, siWomen: 2 },
+  { num: 15, parMen: 4, siMen: 10, parWomen: 4, siWomen: 10 },
+  { num: 16, parMen: 3, siMen: 4, parWomen: 3, siWomen: 4 },
+  { num: 17, parMen: 4, siMen: 14, parWomen: 4, siWomen: 14 },
+  { num: 18, parMen: 4, siMen: 6, parWomen: 4, siWomen: 6 },
+];
 const CUP_COURSES = {
   // Portmarnock's "Red + Blue Nine" routing (see CUP_PORTMARNOCK_HOLES
   // above) is now confirmed from two independent sources: the
@@ -263,19 +274,17 @@ const CUP_COURSES = {
       { id: 'red', name: 'Red', yardage: 5853, ratingMen: null, slopeMen: null, parMen: null, ratingWomen: null, slopeWomen: null, parWomen: 73 },
     ]
   },
-  // NOTE: a later screenshot of this same app/course showed a conflicting
-  // set of numbers for these same tee names/yardages (Par 72, Green
-  // 70.7/127, Black 68.8/123, Black Short 68.6/120) instead of the Par 73
-  // figures below. Kept the Par 73 set since it matches the post-2019
-  // Dunluce redesign (well-documented as the current visitor/member card),
-  // while Par 72 looks like stale pre-2019 data still cached in that app —
-  // but this hasn't been independently confirmed. Flag to the group before
-  // trusting Royal Portrush numbers for real scoring.
-  aug6: cupRealTeesCourse('Royal Portrush Golf Club — Dunluce Course', 73, [
-    { id: 'green', name: 'Green', yardage: 6353, ratingMen: 77.8, slopeMen: 139, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'black-short', name: 'Black Short', yardage: 5888, ratingMen: 75.6, slopeMen: 138, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
-    { id: 'black', name: 'Black', yardage: 5950, ratingMen: 75.3, slopeMen: 136, parMen: 73, ratingWomen: null, slopeWomen: null, parWomen: null },
-  ]),
+  aug6: {
+    name: 'Royal Portrush Golf Club — Dunluce Course',
+    teesVerified: true,
+    holesVerified: true,
+    holes: CUP_ROYAL_PORTRUSH_HOLES,
+    tees: [
+      { id: 'white', name: 'White', yardage: 6705, ratingMen: 76.0, slopeMen: 139, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'green', name: 'Green', yardage: 6476, ratingMen: 72.4, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
+      { id: 'bronze', name: 'Bronze', yardage: 6097, ratingMen: 69.5, slopeMen: 122, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
+    ]
+  },
   aug7: {
     name: 'The Royal Dublin Golf Club',
     teesVerified: true,
