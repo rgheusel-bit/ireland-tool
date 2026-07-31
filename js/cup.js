@@ -7,15 +7,10 @@
    so its onclick-referenced functions stay callable from HTML
    strings, same convention as the rest of index.html.
 
-   Course data (CUP_COURSES) has two independent accuracy flags per
-   course: `teesVerified` (Course Rating/Slope/Par per tee — real once
-   sourced from an actual handicap-calculator/scorecard) and
-   `holesVerified` (per-hole Par/Stroke-Index — still placeholder for
-   every course as of this writing, since that needs an actual
-   scorecard photo/PDF, not just a tee-rating lookup). The UI flags
-   whichever parts are still unverified. Swap in real per-hole data
-   the same way the real tees were added below; nothing else needs to
-   change.
+   Course data (CUP_COURSES) carries real Par + Stroke Index for every
+   hole and real Rating/Slope/Par per tee for all six courses, taken
+   from official scorecards — each course's comment notes its source
+   and any quirk worth knowing when editing it.
    ============================================================ */
 
 // ============================================================
@@ -30,11 +25,6 @@ const CUP_CLINCH = 9.5, CUP_TOTAL = 18;
 // ============================================================
 // COURSE DATA
 // ============================================================
-// All 6 courses now have real, sourced Par/Stroke-Index for every hole
-// and real tee Rating/Slope/Par — teesVerified/holesVerified stay on
-// each course object as a record of that, and to make it obvious in
-// code (and the UI) if a course ever needs to fall back to placeholder
-// data again.
 // Royal County Down — full official scorecard (mournegolfclub.com PDF):
 // real Par + Stroke Index for all 18 holes, separately for the men's
 // tees (Blue/White/Yellow/Green share one Par/SI column) and the
@@ -224,8 +214,6 @@ const CUP_COURSES = {
   // pinned down.
   aug2: {
     name: 'Portmarnock Golf Club — Red + Blue Nine',
-    teesVerified: true,
-    holesVerified: true,
     holes: CUP_PORTMARNOCK_HOLES,
     tees: [
       { id: 'blue-red-blue', name: 'Blue', yardage: 7470, ratingMen: 77.1, slopeMen: 143, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -236,8 +224,6 @@ const CUP_COURSES = {
   },
   aug3: {
     name: 'Royal County Down — Championship Course',
-    teesVerified: true,
-    holesVerified: true,
     holes: CUP_RCD_HOLES,
     tees: [
       { id: 'blue', name: 'Blue', yardage: 7206, ratingMen: 75.9, slopeMen: 145, parMen: 71, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -249,8 +235,6 @@ const CUP_COURSES = {
   },
   aug4: {
     name: 'Ardglass Golf Club',
-    teesVerified: true,
-    holesVerified: true,
     holes: CUP_ARDGLASS_HOLES,
     tees: [
       { id: 'white', name: 'White', yardage: 6268, ratingMen: 70.6, slopeMen: 118, parMen: 70, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -260,8 +244,6 @@ const CUP_COURSES = {
   },
   aug5: {
     name: 'Portstewart Golf Club — Strand Course',
-    teesVerified: true,
-    holesVerified: true,
     holes: CUP_PORTSTEWART_HOLES,
     tees: [
       { id: 'black', name: 'Black', yardage: 7043, ratingMen: 74.2, slopeMen: 131, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -276,8 +258,6 @@ const CUP_COURSES = {
   },
   aug6: {
     name: 'Royal Portrush Golf Club — Dunluce Course',
-    teesVerified: true,
-    holesVerified: true,
     holes: CUP_ROYAL_PORTRUSH_HOLES,
     tees: [
       { id: 'white', name: 'White', yardage: 6705, ratingMen: 76.0, slopeMen: 139, parMen: 72, ratingWomen: null, slopeWomen: null, parWomen: null },
@@ -287,8 +267,6 @@ const CUP_COURSES = {
   },
   aug7: {
     name: 'The Royal Dublin Golf Club',
-    teesVerified: true,
-    holesVerified: true,
     // Real Par + Stroke Index for all 18 holes from the official card
     // (Blue/White/Yellow share one men's Par/SI column, Red has its
     // own women's column — verified both SI columns are clean 1-18
@@ -742,21 +720,21 @@ function cupMatchupPickerHtml(round, item, dayId) {
 function cupItemAutoHtml(round, item) {
   const dayId = round.dayId;
   if (round.id === 'r30' || round.id === 'pick') return '';
-  if (!dayId) return `<div class="auto-hint">Set "Played on" above to enable auto-scoring from Live Scoring.</div>`;
+  if (!dayId) return `<div class="auto-hint">Pick the round above and this scores itself from the hole scores.</div>`;
 
   if (round.id === 'grivey') {
-    if (item.id === 'g4') return `<div class="auto-hint">Manual only — closest-to-pin can't be derived from strokes.</div>`;
+    if (item.id === 'g4') return `<div class="auto-hint">Closest to the pin — tap the winner yourself.</div>`;
     const g = cupGriveyAutoResults(dayId);
-    if (!g) return `<div class="auto-hint">Waiting on complete (18-hole) Live Scoring for all 6 golfers.</div>`;
-    if (item.id === 'g1') return `<div class="auto-hint">Live: lowest net stroke total wins.${cupApplyBtn(round.id, item.id, g.lowIndiv)}</div>`;
-    if (item.id === 'g2') return `<div class="auto-hint">Live: best-2-of-3 net team totals.${cupApplyBtn(round.id, item.id, g.lowTeam)}</div>`;
-    if (item.id === 'g3') return `<div class="auto-hint">Live: ${esc(cupTeamName('A'))} ${g.skinsA} skins · ${esc(cupTeamName('B'))} ${g.skinsB} skins.${cupApplyBtn(round.id, item.id, g.mostSkins)}</div>`;
+    if (!g) return `<div class="auto-hint">Ready once all six golfers have a full 18 holes entered.</div>`;
+    if (item.id === 'g1') return `<div class="auto-hint">Lowest net total.${cupApplyBtn(round.id, item.id, g.lowIndiv)}</div>`;
+    if (item.id === 'g2') return `<div class="auto-hint">Best two net scores of three.${cupApplyBtn(round.id, item.id, g.lowTeam)}</div>`;
+    if (item.id === 'g3') return `<div class="auto-hint">${esc(cupTeamName('A'))} ${g.skinsA} skins · ${esc(cupTeamName('B'))} ${g.skinsB} skins.${cupApplyBtn(round.id, item.id, g.mostSkins)}</div>`;
   }
   if (round.id === 'draw') {
     const d = cupRandomDrawResult(dayId);
-    if (!d) return `<div class="auto-hint">Waiting on complete (18-hole) Live Scoring for all 6 golfers to rank high/mid/low.</div>`;
-    if (item.id === 'd1') return `<div class="auto-hint">Live: high+low best-ball, ${d.bestBall.holesA}–${d.bestBall.holesB} thru ${d.bestBall.thru}.${cupApplyBtn(round.id, item.id, d.bestBall.winner)}</div>`;
-    if (item.id === 'd2') return `<div class="auto-hint">Live: mids 1v1 (${esc(getParticipant(d.midA).name)} v ${esc(getParticipant(d.midB).name)}), ${d.mids.holesA}–${d.mids.holesB} thru ${d.mids.thru}.${cupApplyBtn(round.id, item.id, d.mids.winner)}</div>`;
+    if (!d) return `<div class="auto-hint">Ready once all six golfers have a full 18 holes entered.</div>`;
+    if (item.id === 'd1') return `<div class="auto-hint">High + low best ball, ${d.bestBall.holesA}–${d.bestBall.holesB} thru ${d.bestBall.thru}.${cupApplyBtn(round.id, item.id, d.bestBall.winner)}</div>`;
+    if (item.id === 'd2') return `<div class="auto-hint">Mids: ${esc(getParticipant(d.midA).name)} v ${esc(getParticipant(d.midB).name)}, ${d.mids.holesA}–${d.mids.holesB} thru ${d.mids.thru}.${cupApplyBtn(round.id, item.id, d.mids.winner)}</div>`;
   }
   if (round.id === 'match' || round.id === 'twovone') return cupMatchupPickerHtml(round, item, dayId);
   return '';
@@ -880,14 +858,8 @@ function renderCupHcpPanel() {
         <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${ch != null ? ch : '—'}</td>
       </tr>`;
     }).join('');
-    let flagText;
-    if (course.teesVerified && course.holesVerified) flagText = null;
-    else if (course.teesVerified) flagText = 'real tee ratings — per-hole stroke index still placeholder';
-    else if (course.holesVerified) flagText = 'real per-hole Par/Stroke Index — tee ratings still placeholder';
-    else flagText = 'placeholder tee ratings and stroke index';
-    const flag = flagText ? ` <span style="font-weight:500;color:var(--brass);font-size:11px">(${flagText})</span>` : ' <span style="font-weight:600;color:var(--green);font-size:11px">(verified)</span>';
     return `<div class="hcp-round-block">
-      <div class="hcp-round-title">${esc(day.date.replace(/\(.*\)/, '').trim())} — ${esc(course.name)}${flag}</div>
+      <div class="hcp-round-title">${esc(day.date.replace(/\(.*\)/, '').trim())} — ${esc(course.name)}</div>
       <div class="hcp-table-wrap"><table class="hcp">
         <thead><tr><th>Golfer</th><th>Tee</th><th>Rating / Slope</th><th>Course HCP</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -1159,7 +1131,7 @@ document.getElementById('cup-teamAName').addEventListener('input', e => { state.
 document.getElementById('cup-teamBName').addEventListener('input', e => { state.cup.teams.B = { name: e.target.value || 'Team B' }; renderCupBoard(); saveState(); syncKey('cup'); });
 
 document.getElementById('cup-resetBtn').addEventListener('click', () => {
-  if (confirm('Reset all Cup results, Stableford scores, handicaps, tee choices and hole scores? This clears the saved cup data (once synced, for everyone).')) {
+  if (confirm('Reset all Cup results, Championship scores, handicaps, tee choices and hole scores? This clears them for everyone, not just you.')) {
     state.cup = cupDefaults();
     renderCupAll();
     saveState(); syncKey('cup');
