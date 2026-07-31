@@ -475,7 +475,19 @@ function cupTeeIsRatedFor(tee, ratingSet) {
 // Course Handicap at all. Beyond that: men default to whichever everyday
 // tee sits closest to 6,200–6,500 yards, women to the shortest tee.
 const CUP_MEN_TEE_TARGET = [6200, 6500];
-function cupDefaultTeeFor(course, ratingSet) {
+// Per-course exceptions to those rules. Royal Dublin's women's Par and
+// Stroke Index column on the scorecard belongs to the Red tee, so a
+// women's-tee golfer defaults there to keep her per-hole par matching
+// the card exactly — the shortest-tee rule would otherwise pick Green,
+// whose par 73 differs from the card on one hole.
+const CUP_DEFAULT_TEE_OVERRIDES = { aug7: { women: 'red' } };
+function cupDefaultTeeFor(dayId, ratingSet) {
+  const course = CUP_COURSES[dayId];
+  const override = CUP_DEFAULT_TEE_OVERRIDES[dayId] && CUP_DEFAULT_TEE_OVERRIDES[dayId][ratingSet];
+  if (override) {
+    const forced = course.tees.find(t => t.id === override && cupTeeIsRatedFor(t, ratingSet));
+    if (forced) return forced;
+  }
   const rated = course.tees.filter(t => cupTeeIsRatedFor(t, ratingSet));
   if (!rated.length) return course.tees[0];
   if (ratingSet === 'women') {
@@ -494,7 +506,7 @@ function cupTeeFor(personId, dayId) {
   const profile = state.cup.golferProfiles[personId] || {};
   const ratingSet = profile.ratingSet || 'men';
   const teeId = state.cup.teeSelections[dayId] && state.cup.teeSelections[dayId][personId];
-  return course.tees.find(t => t.id === teeId) || cupDefaultTeeFor(course, ratingSet);
+  return course.tees.find(t => t.id === teeId) || cupDefaultTeeFor(dayId, ratingSet);
 }
 function cupCourseHandicapFor(personId, dayId) {
   const course = CUP_COURSES[dayId]; if (!course || !personId) return null;
