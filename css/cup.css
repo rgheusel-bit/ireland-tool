@@ -207,6 +207,29 @@
 #cup-tracker .lsr-pending-hint{font-size:10px; color:var(--ink-faint); font-style:italic;}
 #cup-tracker .lsr-result{width:64px; text-align:right; font-size:11px; color:var(--ink-soft); flex-shrink:0;}
 #cup-tracker .lsr-result b{display:block; font-size:13px; color:var(--ink);}
+/* ---------- 30 Scores ---------- */
+#cup-tracker .t30-panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:12px 14px; margin-bottom:16px;}
+#cup-tracker .t30-head{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px; color:var(--ink-faint); margin-bottom:10px;}
+#cup-tracker .t30-team + .t30-team{margin-top:12px; padding-top:12px; border-top:1px solid var(--hair);}
+#cup-tracker .t30-team-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12.5px; font-weight:700; color:var(--ink); font-family:var(--display); margin-bottom:7px;}
+#cup-tracker .t30-count{font-family:var(--body); font-size:11.5px; font-weight:700; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+#cup-tracker .t30-count.done{color:var(--green);}
+#cup-tracker .t30-count.over{color:var(--rust);}
+#cup-tracker .t30-picks{display:flex; gap:6px; flex-wrap:wrap;}
+#cup-tracker .t30-pick{flex:1 1 0; min-width:88px; appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:var(--radius-sm); padding:7px 8px; font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; text-align:center; transition:.15s;}
+#cup-tracker .t30-pick small{display:block; font-weight:500; font-size:10.5px; color:var(--ink-faint); margin-top:2px; font-variant-numeric:tabular-nums;}
+#cup-tracker .t30-pick:hover:not(:disabled){border-color:var(--green-3);}
+#cup-tracker .t30-pick.on{background:var(--green); border-color:var(--green); color:#fff;}
+#cup-tracker .t30-pick.on small{color:rgba(255,255,255,.8);}
+#cup-tracker .t30-pick:disabled{opacity:.45; cursor:default;}
+#cup-tracker .thirty-line{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:3px;}
+#cup-tracker .thirty-line .tl-team{font-weight:700; color:var(--ink); min-width:88px;}
+#cup-tracker .thirty-line .tl-count{font-variant-numeric:tabular-nums; font-weight:700;}
+#cup-tracker .thirty-line .tl-count.done{color:var(--green);}
+#cup-tracker .thirty-line .tl-total{color:var(--ink-soft);}
+#cup-tracker .thirty-line b.over{color:var(--rust); font-weight:700;}
+#cup-tracker .thirty-line .skipped{color:var(--brass);}
+
 #cup-tracker .save-state{font-size:11px; color:var(--ink-faint); text-align:center; margin:-8px 0 16px;}
 #cup-tracker .live-leaderboard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:10px 8px;}
 #cup-tracker .live-leaderboard h3{font-family:var(--display); font-weight:600; font-size:1rem; margin:6px 10px 8px;}

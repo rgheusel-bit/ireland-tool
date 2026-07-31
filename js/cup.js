@@ -342,7 +342,7 @@ function cupDefaults() {
       { id: 'seat', personId: null, seat: true, team: 'B' },
     ],
     rounds: [
-      { id: 'r30', game: '30 Scores', dayId: null, items: [
+      { id: 'r30', game: '30 Scores', dayId: 'aug2', items: [
         { id: 'i1', name: 'Team match — lowest total of 30 net scores', value: 2, state: null }] },
       { id: 'grivey', game: 'Grivey', dayId: null, items: [
         { id: 'g1', name: 'Low individual net', value: 1, state: null },
@@ -371,7 +371,11 @@ function cupDefaults() {
     teeSelections: {},
     groups: {},
     holeScores: {},
-    matchups: {}
+    matchups: {},
+    // 30 Scores: which players' net scores a team elects to count on each
+    // hole — thirty[dayId][hole][personId] = true. Not derivable from the
+    // scores themselves; it's the strategic call the game is built on.
+    thirty: {}
   };
 }
 
@@ -386,7 +390,9 @@ function cupHydrate(saved) {
   if (Array.isArray(saved.rounds)) {
     saved.rounds.forEach(sr => {
       const r = out.rounds.find(x => x.id === sr.id); if (!r) return;
-      if (sr.dayId !== undefined) r.dayId = sr.dayId;
+      // A saved null is an older save from before this round had a
+      // scheduled course — let the default stand rather than blanking it.
+      if (sr.dayId != null) r.dayId = sr.dayId;
       (sr.items || []).forEach(si => { const it = r.items.find(x => x.id === si.id); if (it) it.state = si.state; });
     });
   }
@@ -404,6 +410,7 @@ function cupHydrate(saved) {
   if (saved.groups) out.groups = saved.groups;
   if (saved.holeScores) out.holeScores = saved.holeScores;
   if (saved.matchups) out.matchups = saved.matchups;
+  if (saved.thirty) out.thirty = saved.thirty;
   return out;
 }
 
@@ -649,6 +656,62 @@ function cupRandomDrawResult(dayId) {
     highB: rB[0].pid, lowB: rB[2].pid, midB: rB[1].pid
   };
 }
+// ---------- 30 Scores ----------
+// Each team counts exactly 30 net scores across the 18 holes, choosing
+// after each hole how many of its three players to count. Lowest total
+// of those 30 wins. The picks are a strategic choice, so they're entered
+// rather than derived; everything below reads off them.
+const CUP_THIRTY_TARGET = 30;
+function cupThirtyPicked(dayId, hole, pid) {
+  const day = state.cup.thirty[dayId];
+  return !!(day && day[hole] && day[hole][pid]);
+}
+function cupThirtyToggle(dayId, hole, pid) {
+  if (!state.cup.thirty[dayId]) state.cup.thirty[dayId] = {};
+  if (!state.cup.thirty[dayId][hole]) state.cup.thirty[dayId][hole] = {};
+  const slot = state.cup.thirty[dayId][hole];
+  if (slot[pid]) delete slot[pid]; else slot[pid] = true;
+  saveState(); syncKey('cup');
+  renderCupLivePanel(); renderCupRounds();
+}
+function cupThirtyTeamStats(dayId, team) {
+  const roster = cupTeamRosterForDay(team, dayId);
+  let counted = 0, total = 0, missingScore = 0;
+  const perHole = {};
+  for (let h = 1; h <= 18; h++) {
+    roster.forEach(pid => {
+      if (!cupThirtyPicked(dayId, h, pid)) return;
+      counted++;
+      perHole[h] = (perHole[h] || 0) + 1;
+      const net = cupNetForHole(pid, dayId, h);
+      if (net == null) missingScore++; else total += net;
+    });
+  }
+  // Holes that have been played but had nothing counted — usually an
+  // oversight, since the format counts at least one score a hole.
+  const skipped = [];
+  for (let h = 1; h <= 18; h++) {
+    if (perHole[h]) continue;
+    if (roster.some(pid => cupNetForHole(pid, dayId, h) != null)) skipped.push(h);
+  }
+  const holesLeft = 18 - Object.keys(perHole).length;
+  return {
+    counted, total, missingScore, skipped, perHole,
+    over: counted > CUP_THIRTY_TARGET,
+    // With three players a hole, anything more than 3x the untouched
+    // holes short of 30 can no longer get there.
+    unreachable: counted + roster.length * holesLeft < CUP_THIRTY_TARGET
+  };
+}
+function cupThirtyResult(dayId) {
+  const a = cupThirtyTeamStats(dayId, 'A');
+  const b = cupThirtyTeamStats(dayId, 'B');
+  const complete = a.counted === CUP_THIRTY_TARGET && b.counted === CUP_THIRTY_TARGET
+    && !a.missingScore && !b.missingScore;
+  const winner = !complete ? null : (a.total < b.total ? 'A' : (b.total < a.total ? 'B' : 'T'));
+  return { a, b, complete, winner };
+}
+
 // Grivey: low individual net, low team (best 2 of 3 net), most team skins —
 // all derivable from complete (18-hole) net stroke totals. KPs stay manual.
 function cupSkinsForDay(dayId) {
@@ -819,10 +882,31 @@ function cupMatchupPickerHtml(round, item, dayId) {
     <div style="margin-top:4px">${resultHtml}</div>
   </div>`;
 }
+function cupThirtyTeamLine(team, s) {
+  const label = esc(cupTeamName(team));
+  const flag = s.over ? ' <b class="over">over 30</b>'
+    : s.unreachable ? ' <b class="over">can\'t reach 30</b>'
+    : s.missingScore ? ' <b class="over">' + s.missingScore + ' without a score</b>'
+    : s.skipped.length ? ` <span class="skipped">nothing counted on ${s.skipped.length === 1 ? 'hole ' + s.skipped[0] : s.skipped.length + ' played holes'}</span>`
+    : '';
+  return `<div class="thirty-line"><span class="tl-team">${label}</span>
+    <span class="tl-count ${s.counted === CUP_THIRTY_TARGET ? 'done' : ''}">${s.counted}/30</span>
+    <span class="tl-total">${s.counted ? 'net ' + s.total : ''}</span>${flag}</div>`;
+}
 function cupItemAutoHtml(round, item) {
   const dayId = round.dayId;
-  if (round.id === 'r30' || round.id === 'pick') return '';
+  if (round.id === 'pick') return '';
   if (!dayId) return `<div class="auto-hint">Pick the round above and this scores itself from the hole scores.</div>`;
+
+  if (round.id === 'r30') {
+    const r = cupThirtyResult(dayId);
+    return `<div class="auto-hint">
+      ${cupThirtyTeamLine('A', r.a)}${cupThirtyTeamLine('B', r.b)}
+      ${r.complete
+        ? `Lowest total wins.${cupApplyBtn(round.id, item.id, r.winner)}`
+        : `Choose which scores count hole by hole in Live Scoring — both teams need exactly 30.`}
+    </div>`;
+  }
 
   if (round.id === 'grivey') {
     if (item.id === 'g4') return `<div class="auto-hint">Closest to the pin — tap the winner yourself.</div>`;
@@ -853,7 +937,7 @@ function renderCupRounds() {
         ${cupSegHTML(r.id, it)}
       </div>
       ${cupItemAutoHtml(r, it)}`).join('');
-    const dayPickerHtml = (r.id === 'r30' || r.id === 'pick') ? '' : `<div class="round-day-row">
+    const dayPickerHtml = (r.id === 'pick') ? '' : `<div class="round-day-row">
         <label for="round-day-${r.id}">Played on</label>
         <select id="round-day-${r.id}" onchange="cupSetRoundDay('${r.id}',this.value)">
           <option value="">Not assigned</option>${dayOpts}
@@ -1093,6 +1177,37 @@ function cupLiveLeaderboardHtml(dayId) {
   </div>`;
 }
 
+// The hole-by-hole half of 30 Scores: tap the players whose net score
+// counts for their team on this hole. Only appears on the round the
+// game is scheduled for.
+function cupThirtyPickerHtml(dayId, hole) {
+  const round = state.cup.rounds.find(r => r.id === 'r30');
+  if (!round || round.dayId !== dayId) return '';
+  const teamBlock = team => {
+    const roster = cupTeamRosterForDay(team, dayId);
+    if (!roster.length) return '';
+    const stats = cupThirtyTeamStats(dayId, team);
+    const picks = roster.map(pid => {
+      const net = cupNetForHole(pid, dayId, hole);
+      const on = cupThirtyPicked(dayId, hole, pid);
+      const name = getParticipant(pid).name;
+      return `<button type="button" class="t30-pick ${on ? 'on' : ''}" ${net == null ? 'disabled' : ''}
+        onclick="cupThirtyToggle('${dayId}',${hole},'${pid}')"
+        aria-pressed="${on}" aria-label="Count ${esc(name)}'s score on hole ${hole}">
+        ${esc(name)}<small>${net == null ? 'no score' : 'net ' + net}</small></button>`;
+    }).join('');
+    const cls = stats.over || stats.unreachable ? 'over' : (stats.counted === CUP_THIRTY_TARGET ? 'done' : '');
+    return `<div class="t30-team">
+      <div class="t30-team-head"><span>${esc(cupTeamName(team))}</span><span class="t30-count ${cls}">${stats.counted}/30</span></div>
+      <div class="t30-picks">${picks}</div>
+    </div>`;
+  };
+  return `<div class="t30-panel">
+    <div class="t30-head">30 Scores — whose score counts on hole ${hole}</div>
+    ${teamBlock('A')}${teamBlock('B')}
+  </div>`;
+}
+
 function renderCupLivePanel() {
   const mount = document.getElementById('cup-live-mount');
   if (!mount) return;
@@ -1169,6 +1284,7 @@ function renderCupLivePanel() {
     </div>
     <div class="hole-nav-jump">${jumpStrip}</div>
     <div class="live-score-rows">${scoreRows}</div>
+    ${cupThirtyPickerHtml(dayId, hole)}
     <div class="save-state">${cupSaveStatusText()}</div>
     ${cupLiveLeaderboardHtml(dayId)}`;
 }
