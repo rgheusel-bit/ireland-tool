@@ -17,6 +17,22 @@
 // STATIC TRIP-SPECIFIC MAPPING
 // ============================================================
 const CUP_GOLFER_IDS = ['george', 'eric', 'jeff', 'phil', 'robert', 'gary', 'elizabeth'];
+
+// Starting Handicap Indexes, from the group's GHIN records. Stored the way
+// the maths wants them, which is the OPPOSITE sign from how golf writes
+// them: GHIN shows a better-than-scratch index as "+0.6", and the Course
+// Handicap formula consumes that as -0.6. Everything below is the maths
+// value; the UI reads and writes GHIN notation. Editable in Handicaps &
+// Tees — these are just the starting point.
+const CUP_SEED_HANDICAPS = {
+  george: 6.5,
+  eric: 12.9,
+  jeff: 12.9,
+  phil: 7.8,
+  gary: 10.5,
+  robert: -0.6, // GHIN shows this as +0.6
+  // elizabeth: not yet known
+};
 const CUP_ROUND_DAYS = { R1: 'aug2', R2: 'aug3', R3: 'aug4', R4: 'aug5', R5: 'aug6', R6: 'aug7' };
 const SF_ROUNDS = Object.keys(CUP_ROUND_DAYS);
 const RANK_PTS = [10, 8, 6, 5, 4, 3];
@@ -297,7 +313,12 @@ const CUP_COURSES = {
 // ============================================================
 function cupDefaults() {
   const golferProfiles = {};
-  CUP_GOLFER_IDS.forEach(pid => { golferProfiles[pid] = { handicapIndex: null, ratingSet: pid === 'elizabeth' ? 'women' : 'men' }; });
+  CUP_GOLFER_IDS.forEach(pid => {
+    golferProfiles[pid] = {
+      handicapIndex: CUP_SEED_HANDICAPS[pid] !== undefined ? CUP_SEED_HANDICAPS[pid] : null,
+      ratingSet: pid === 'elizabeth' ? 'women' : 'men'
+    };
+  });
   return {
     teams: { A: { name: 'The Fescue' }, B: { name: 'The Claret' } },
     players: [
@@ -359,7 +380,12 @@ function cupHydrate(saved) {
   }
   if (saved.golferProfiles) {
     Object.keys(saved.golferProfiles).forEach(pid => {
-      if (out.golferProfiles[pid]) out.golferProfiles[pid] = Object.assign({}, out.golferProfiles[pid], saved.golferProfiles[pid]);
+      if (!out.golferProfiles[pid]) return;
+      const sp = saved.golferProfiles[pid] || {};
+      // A saved null means nobody ever typed one in — let the seeded
+      // handicap show through rather than blanking it out.
+      if (sp.handicapIndex != null) out.golferProfiles[pid].handicapIndex = sp.handicapIndex;
+      if (sp.ratingSet) out.golferProfiles[pid].ratingSet = sp.ratingSet;
     });
   }
   if (saved.teeSelections) out.teeSelections = saved.teeSelections;
@@ -371,6 +397,27 @@ function cupHydrate(saved) {
 
 const cupFmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
 const cupTeamName = t => state.cup.teams[t] ? state.cup.teams[t].name : ('Team ' + t);
+
+// ---------- handicap notation ----------
+// Golf writes a better-than-scratch handicap as "+0.6" but the maths needs
+// -0.6, so the sign flips between what people read and what we store. These
+// three keep that conversion in one place: parse takes GHIN notation in,
+// the two formatters put GHIN notation back on screen.
+function cupParseHcp(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  const m = s.match(/^([+-]?)\s*(\d+(?:\.\d+)?)$/);
+  if (!m) return NaN;
+  const n = Number(m[2]);
+  return m[1] === '+' ? -n : n;
+}
+function cupFmtHcp(v) {
+  if (v == null) return '';
+  return v < 0 ? '+' + cupFmt(Math.abs(v)) : cupFmt(v);
+}
+function cupFmtCourseHcp(v) {
+  return v == null ? '—' : cupFmtHcp(v);
+}
 
 // ============================================================
 // ROSTER RESOLUTION — Seat alternates Gary / Elizabeth by round
@@ -828,7 +875,7 @@ function renderCupHcpPanel() {
     const prof = state.cup.golferProfiles[pid];
     return `<tr>
       <td class="name">${esc(p.name)}</td>
-      <td><input type="number" step="0.1" placeholder="—" value="${prof.handicapIndex != null ? prof.handicapIndex : ''}"
+      <td><input type="text" inputmode="decimal" placeholder="—" value="${esc(cupFmtHcp(prof.handicapIndex))}"
         onchange="cupSetHandicapIndex('${pid}',this.value)" aria-label="${esc(p.name)} Handicap Index"></td>
       <td><select onchange="cupSetRatingSet('${pid}',this.value)" aria-label="${esc(p.name)} rating set">
         <option value="men" ${prof.ratingSet === 'men' ? 'selected' : ''}>Men's</option>
@@ -855,7 +902,7 @@ function renderCupHcpPanel() {
         <td class="name">${esc(p.name)}</td>
         <td><select onchange="cupSetTeeSelection('${dayId}','${pid}',this.value)" aria-label="${esc(p.name)} tee">${teeOptions}</select></td>
         <td>${rating != null ? rating.toFixed(1) : '—'} / ${slope != null ? slope : '—'}</td>
-        <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${ch != null ? ch : '—'}</td>
+        <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${cupFmtCourseHcp(ch)}</td>
       </tr>`;
     }).join('');
     return `<div class="hcp-round-block">
@@ -872,10 +919,13 @@ function renderCupHcpPanel() {
       <thead><tr><th>Golfer</th><th>Handicap Index</th><th>Rating set</th></tr></thead>
       <tbody>${golferRows}</tbody>
     </table></div>
+    <div class="hcp-hint">Enter each index exactly as GHIN shows it — a better-than-scratch handicap is written with a plus, like +0.6.</div>
     ${roundBlocks}`;
 }
 function cupSetHandicapIndex(pid, val) {
-  state.cup.golferProfiles[pid].handicapIndex = val === '' ? null : Number(val);
+  const parsed = cupParseHcp(val);
+  if (Number.isNaN(parsed)) { renderCupHcpPanel(); return; } // unreadable — put the old value back
+  state.cup.golferProfiles[pid].handicapIndex = parsed;
   saveState(); syncKey('cup');
   renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
 }
@@ -1030,7 +1080,7 @@ function renderCupLivePanel() {
     return `<div class="live-score-row">
       <div class="lsr-name">
         <div class="n">${esc(p.name)}${dots}</div>
-        <div class="meta">${ch != null ? 'HCP ' + ch : 'Set handicap'} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;" title="Move ${esc(p.name)} to the other group">→ ${otherGroupLabel}</a></div>
+        <div class="meta">${ch != null ? 'HCP ' + cupFmtCourseHcp(ch) : 'Set handicap'} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;" title="Move ${esc(p.name)} to the other group">→ ${otherGroupLabel}</a></div>
       </div>
       <div class="lsr-stepper">
         <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},-1)" aria-label="Decrease ${esc(p.name)}'s score">−</button>
