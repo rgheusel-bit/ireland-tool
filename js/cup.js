@@ -924,11 +924,17 @@ function cupSetTeeSelection(dayId, pid, teeId) {
 // ============================================================
 let cupLiveView = { dayId: null, groupIdx: 0, hole: 1 };
 
+// Groups default to an even 3/3 split, except where the day's format
+// calls for something else: Royal County Down is the trip's "4 & 2 day"
+// (the Match Play game is two singles in a group of four plus one in a
+// pair), so it splits 4/2. Still editable per day via "move to Group N".
+const CUP_GROUP_FIRST_SIZE = { aug3: 4 };
 function cupDefaultGroups(dayId) {
   const day = DAYS.find(d => d.id === dayId);
   if (!day || !day.golf) return [[], []];
   const g = day.golf.golfers;
-  return [g.slice(0, 3), g.slice(3, 6)];
+  const firstSize = CUP_GROUP_FIRST_SIZE[dayId] || 3;
+  return [g.slice(0, firstSize), g.slice(firstSize)];
 }
 function cupGroupsForDay(dayId) {
   return (state.cup.groups[dayId] && state.cup.groups[dayId].length === 2) ? state.cup.groups[dayId] : cupDefaultGroups(dayId);
@@ -946,18 +952,39 @@ function cupSetLiveRound(dayId) { cupLiveView.dayId = dayId; cupLiveView.groupId
 function cupSetLiveGroup(idx) { cupLiveView.groupIdx = idx; renderCupLivePanel(); }
 function cupSetLiveHole(n) { if (n < 1 || n > 18) return; cupLiveView.hole = n; renderCupLivePanel(); }
 
-function cupAdjustGross(dayId, pid, hole, delta) {
+// Par for this golfer on this hole — the starting point every score
+// is entered relative to.
+function cupParFor(dayId, pid, hole) {
+  const holeData = CUP_COURSES[dayId].holes.find(h => h.num === hole);
+  const prof = state.cup.golferProfiles[pid] || {};
+  return prof.ratingSet === 'women' ? holeData.parWomen : holeData.parMen;
+}
+function cupWriteGross(dayId, pid, hole, value) {
   if (!state.cup.holeScores[dayId]) state.cup.holeScores[dayId] = {};
   if (!state.cup.holeScores[dayId][pid]) state.cup.holeScores[dayId][pid] = {};
-  const course = CUP_COURSES[dayId];
-  const holeData = course.holes.find(h => h.num === hole);
-  const prof = state.cup.golferProfiles[pid] || {};
-  const defaultPar = prof.ratingSet === 'women' ? holeData.parWomen : holeData.parMen;
-  const cur = state.cup.holeScores[dayId][pid][hole];
-  const start = (cur != null && cur !== '') ? Number(cur) : defaultPar;
-  state.cup.holeScores[dayId][pid][hole] = Math.max(1, start + delta);
+  state.cup.holeScores[dayId][pid][hole] = Math.max(1, value);
   saveState(); syncKey('cup');
   renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+}
+function cupAdjustGross(dayId, pid, hole, delta) {
+  const cur = cupHoleScoresFor(pid, dayId)[hole];
+  const start = (cur != null && cur !== '') ? Number(cur) : cupParFor(dayId, pid, hole);
+  cupWriteGross(dayId, pid, hole, start + delta);
+}
+// Scores start showing par, so a par is a single tap to confirm rather
+// than a +/- round trip. Deliberately NOT pre-written into state for
+// every hole: "thru N" and the Championship standings only count holes
+// actually entered, so scrolling ahead to look at hole 18 must not mark
+// the round as played.
+function cupConfirmPar(dayId, pid, hole) {
+  cupWriteGross(dayId, pid, hole, cupParFor(dayId, pid, hole));
+}
+function cupClearGross(dayId, pid, hole) {
+  if (state.cup.holeScores[dayId] && state.cup.holeScores[dayId][pid]) {
+    delete state.cup.holeScores[dayId][pid][hole];
+    saveState(); syncKey('cup');
+    renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+  }
 }
 
 function cupLiveLeaderboardHtml(dayId) {
@@ -1008,7 +1035,7 @@ function renderCupLivePanel() {
     return `<button class="hole-jump-btn ${anyScored ? 'done' : ''} ${h.num === hole ? 'current' : ''}" onclick="cupSetLiveHole(${h.num})">${h.num}</button>`;
   }).join('');
 
-  const otherGroupLabel = cupLiveView.groupIdx === 0 ? 'Group 2' : 'Group 1';
+  const otherGroupLabel = cupLiveView.groupIdx === 0 ? 'Grp 2' : 'Grp 1';
   const scoreRows = group.map(pid => {
     const p = getParticipant(pid);
     const prof = state.cup.golferProfiles[pid] || {};
@@ -1023,17 +1050,22 @@ function renderCupLivePanel() {
     const net = hasGross ? Number(gross) - strokes : null;
     const pts = net != null ? cupStablefordPoints(par, net) : null;
     const dots = strokes > 0 ? '<span class="stroke-dot"></span>'.repeat(Math.min(strokes, 3)) : '';
+    // Unentered scores show par, greyed, as a one-tap confirm. Entered
+    // scores are solid and tapping clears them back to unentered.
+    const grossBtn = hasGross
+      ? `<button type="button" class="lsr-gross" onclick="cupClearGross('${dayId}','${pid}',${hole})" title="Clear this score" aria-label="${esc(p.name)} scored ${gross}. Clear score">${gross}</button>`
+      : `<button type="button" class="lsr-gross pending" onclick="cupConfirmPar('${dayId}','${pid}',${hole})" title="Tap to record par (${par})" aria-label="${esc(p.name)} — tap to record par, ${par}">${par}</button>`;
     return `<div class="live-score-row">
       <div class="lsr-name">
         <div class="n">${esc(p.name)}${dots}</div>
-        <div class="meta">${ch != null ? 'Course HCP ' + ch : 'Set handicap in Handicaps &amp; Tees'} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;">move to ${otherGroupLabel}</a></div>
+        <div class="meta">${ch != null ? 'HCP ' + ch : 'Set handicap'} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;" title="Move ${esc(p.name)} to the other group">→ ${otherGroupLabel}</a></div>
       </div>
       <div class="lsr-stepper">
-        <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},-1)" aria-label="Decrease score">−</button>
-        <div class="lsr-gross">${hasGross ? gross : '–'}</div>
-        <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},1)" aria-label="Increase score">+</button>
+        <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},-1)" aria-label="Decrease ${esc(p.name)}'s score">−</button>
+        ${grossBtn}
+        <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},1)" aria-label="Increase ${esc(p.name)}'s score">+</button>
       </div>
-      <div class="lsr-result">${pts != null ? `<b>${pts} pt${pts === 1 ? '' : 's'}</b>net ${net}` : '—'}</div>
+      <div class="lsr-result">${pts != null ? `<b>${pts} pt${pts === 1 ? '' : 's'}</b>net ${net}` : '<span class="lsr-pending-hint">tap par</span>'}</div>
     </div>`;
   }).join('');
 

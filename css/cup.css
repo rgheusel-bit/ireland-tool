@@ -187,10 +187,22 @@
 #cup-tracker .lsr-name .n{font-weight:700; font-size:13.5px; color:var(--ink);}
 #cup-tracker .lsr-name .stroke-dot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--brass-2); margin-left:6px; vertical-align:middle;}
 #cup-tracker .lsr-name .meta{font-size:11px; color:var(--ink-faint); margin-top:1px;}
+#cup-tracker .lsr-name .meta a{color:var(--green-2); text-decoration:none; border-bottom:1px dotted var(--green-line); font-weight:600;}
+#cup-tracker .lsr-name .meta a:hover{color:var(--green); border-bottom-color:var(--green-3);}
 #cup-tracker .lsr-stepper{display:flex; align-items:center; gap:8px;}
 #cup-tracker .lsr-stepper button{appearance:none; border:1px solid var(--line); background:#fff; border-radius:8px; width:32px; height:32px; font-size:16px; cursor:pointer; color:var(--ink-soft);}
 #cup-tracker .lsr-stepper button:hover{border-color:var(--green-3); color:var(--green);}
-#cup-tracker .lsr-gross{font-family:var(--display); font-weight:700; font-size:1.3rem; width:1.5em; text-align:center;}
+#cup-tracker .lsr-gross{
+  appearance:none; border:1px solid transparent; background:transparent; font:inherit;
+  font-family:var(--display); font-weight:700; font-size:1.3rem; color:var(--ink);
+  min-width:2em; min-height:34px; padding:0 4px; border-radius:8px; text-align:center;
+  cursor:pointer; font-variant-numeric:tabular-nums; transition:background .12s, color .12s;
+}
+#cup-tracker .lsr-gross:hover{background:var(--stone);}
+/* Unentered: shows par as a one-tap confirm, clearly not yet counted. */
+#cup-tracker .lsr-gross.pending{color:var(--ink-faint); border-style:dashed; border-color:var(--line);}
+#cup-tracker .lsr-gross.pending:hover{color:var(--green); border-color:var(--green-3); background:var(--green-wash);}
+#cup-tracker .lsr-pending-hint{font-size:10px; color:var(--ink-faint); font-style:italic;}
 #cup-tracker .lsr-result{width:64px; text-align:right; font-size:11px; color:var(--ink-soft); flex-shrink:0;}
 #cup-tracker .lsr-result b{display:block; font-size:13px; color:var(--ink);}
 #cup-tracker .live-leaderboard{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:10px 8px;}
