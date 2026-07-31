@@ -31,7 +31,7 @@ const CUP_SEED_HANDICAPS = {
   phil: 7.8,
   gary: 10.5,
   robert: -0.6, // GHIN shows this as +0.6
-  // elizabeth: not yet known
+  elizabeth: 28.0,
 };
 const CUP_ROUND_DAYS = { R1: 'aug2', R2: 'aug3', R3: 'aug4', R4: 'aug5', R5: 'aug6', R6: 'aug7' };
 const SF_ROUNDS = Object.keys(CUP_ROUND_DAYS);
@@ -451,13 +451,31 @@ function cupCourseHandicap(hi, tee, ratingSet) {
   if (rating == null || slope == null || par == null) return null;
   return Math.round(Number(hi) * (slope / 113) + (rating - par));
 }
+function cupTeeIsRatedFor(tee, ratingSet) {
+  const rating = ratingSet === 'women' ? tee.ratingWomen : tee.ratingMen;
+  const slope = ratingSet === 'women' ? tee.slopeWomen : tee.slopeMen;
+  const par = ratingSet === 'women' ? tee.parWomen : tee.parMen;
+  return rating != null && slope != null && par != null;
+}
+// Which tee a golfer is on if they haven't picked one. Not simply the
+// first tee: several courses list their back tees with men's ratings
+// only, so a women's-tee golfer defaulted there would silently get no
+// Course Handicap at all. Prefer the first tee actually rated for them.
+function cupDefaultTeeFor(course, ratingSet) {
+  return course.tees.find(t => cupTeeIsRatedFor(t, ratingSet)) || course.tees[0];
+}
+function cupTeeFor(personId, dayId) {
+  const course = CUP_COURSES[dayId]; if (!course || !personId) return null;
+  const profile = state.cup.golferProfiles[personId] || {};
+  const ratingSet = profile.ratingSet || 'men';
+  const teeId = state.cup.teeSelections[dayId] && state.cup.teeSelections[dayId][personId];
+  return course.tees.find(t => t.id === teeId) || cupDefaultTeeFor(course, ratingSet);
+}
 function cupCourseHandicapFor(personId, dayId) {
   const course = CUP_COURSES[dayId]; if (!course || !personId) return null;
   const profile = state.cup.golferProfiles[personId];
   if (!profile || profile.handicapIndex == null || profile.handicapIndex === '') return null;
-  const teeId = state.cup.teeSelections[dayId] && state.cup.teeSelections[dayId][personId];
-  const tee = course.tees.find(t => t.id === teeId) || course.tees[0];
-  return cupCourseHandicap(profile.handicapIndex, tee, profile.ratingSet || 'men');
+  return cupCourseHandicap(profile.handicapIndex, cupTeeFor(personId, dayId), profile.ratingSet || 'men');
 }
 // Strokes received on a given hole from a Course Handicap + that hole's Stroke Index.
 // Handles the >18 overflow (2nd stroke on hardest holes) and plus-handicap give-back
@@ -892,17 +910,19 @@ function renderCupHcpPanel() {
     const rows = day.golf.golfers.map(pid => {
       const p = getParticipant(pid);
       const prof = state.cup.golferProfiles[pid] || {};
-      const teeSel = (state.cup.teeSelections[dayId] && state.cup.teeSelections[dayId][pid]) || course.tees[0].id;
-      const tee = course.tees.find(t => t.id === teeSel) || course.tees[0];
+      const ratingSet = prof.ratingSet || 'men';
+      const tee = cupTeeFor(pid, dayId);
       const ch = cupCourseHandicapFor(pid, dayId);
-      const teeOptions = course.tees.map(t => `<option value="${t.id}" ${t.id === teeSel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
-      const rating = prof.ratingSet === 'women' ? tee.ratingWomen : tee.ratingMen;
-      const slope = prof.ratingSet === 'women' ? tee.slopeWomen : tee.slopeMen;
+      const teeOptions = course.tees.map(t =>
+        `<option value="${t.id}" ${t.id === tee.id ? 'selected' : ''}${cupTeeIsRatedFor(t, ratingSet) ? '' : ' disabled'}>${esc(t.name)}${cupTeeIsRatedFor(t, ratingSet) ? '' : ' — not rated'}</option>`).join('');
+      const rating = ratingSet === 'women' ? tee.ratingWomen : tee.ratingMen;
+      const slope = ratingSet === 'women' ? tee.slopeWomen : tee.slopeMen;
+      const unrated = !cupTeeIsRatedFor(tee, ratingSet);
       return `<tr>
         <td class="name">${esc(p.name)}</td>
         <td><select onchange="cupSetTeeSelection('${dayId}','${pid}',this.value)" aria-label="${esc(p.name)} tee">${teeOptions}</select></td>
         <td>${rating != null ? rating.toFixed(1) : '—'} / ${slope != null ? slope : '—'}</td>
-        <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${cupFmtCourseHcp(ch)}</td>
+        <td class="hcp-ch ${ch != null && ch < 0 ? 'minus' : ''}">${unrated ? '<span class="hcp-unrated">no rating</span>' : cupFmtCourseHcp(ch)}</td>
       </tr>`;
     }).join('');
     return `<div class="hcp-round-block">
@@ -1080,7 +1100,7 @@ function renderCupLivePanel() {
     return `<div class="live-score-row">
       <div class="lsr-name">
         <div class="n">${esc(p.name)}${dots}</div>
-        <div class="meta">${ch != null ? 'HCP ' + cupFmtCourseHcp(ch) : 'Set handicap'} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;" title="Move ${esc(p.name)} to the other group">→ ${otherGroupLabel}</a></div>
+        <div class="meta">${ch != null ? 'HCP ' + cupFmtCourseHcp(ch) : (prof.handicapIndex != null ? 'Tee not rated' : 'Set handicap')} · <a href="#" onclick="cupSwapGroup('${dayId}','${pid}');return false;" title="Move ${esc(p.name)} to the other group">→ ${otherGroupLabel}</a></div>
       </div>
       <div class="lsr-stepper">
         <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},-1)" aria-label="Decrease ${esc(p.name)}'s score">−</button>
