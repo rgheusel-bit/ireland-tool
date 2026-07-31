@@ -34,6 +34,16 @@ const CUP_SEED_HANDICAPS = {
   elizabeth: 28.0,
 };
 const CUP_ROUND_DAYS = { R1: 'aug2', R2: 'aug3', R3: 'aug4', R4: 'aug5', R5: 'aug6', R6: 'aug7' };
+// Which Cup game is played on which round. Fixed for the trip, so every
+// game knows its own course and scores itself off that round's card.
+const CUP_GAME_DAY = {
+  r30:     'aug2', // Portmarnock
+  match:   'aug3', // Royal County Down — the 4 & 2 day
+  grivey:  'aug4', // Ardglass
+  draw:    'aug5', // Portstewart
+  pick:    'aug6', // Royal Portrush
+  twovone: 'aug7', // Royal Dublin
+};
 const SF_ROUNDS = Object.keys(CUP_ROUND_DAYS);
 const RANK_PTS = [10, 8, 6, 5, 4, 3];
 const CUP_CLINCH = 9.5, CUP_TOTAL = 18;
@@ -342,26 +352,26 @@ function cupDefaults() {
       { id: 'seat', personId: null, seat: true, team: 'B' },
     ],
     rounds: [
-      { id: 'r30', game: '30 Scores', dayId: 'aug2', items: [
+      { id: 'r30', game: '30 Scores', items: [
         { id: 'i1', name: 'Team match — lowest total of 30 net scores', value: 2, state: null }] },
-      { id: 'grivey', game: 'Grivey', dayId: null, items: [
+      { id: 'grivey', game: 'Grivey', items: [
         { id: 'g1', name: 'Low individual net', value: 1, state: null },
         { id: 'g2', name: 'Low team — best 2 net of 3', value: 1, state: null },
         { id: 'g3', name: 'Most team skins', value: 1, state: null },
         { id: 'g4', name: 'Most team KPs', value: 1, state: null }] },
-      { id: 'draw', game: 'Random Draw', dayId: null, items: [
+      { id: 'draw', game: 'Random Draw', items: [
         { id: 'd1', name: 'Net best-ball match — high + low', value: 1, state: null },
         { id: 'd2', name: 'Mids — 1 v 1', value: 1, state: null }] },
-      { id: 'pick', game: 'Pick a Player', dayId: null, items: [
+      { id: 'pick', game: 'Pick a Player', items: [
         { id: 'k1', name: 'Match 1', value: 1, state: null },
         { id: 'k2', name: 'Match 2', value: 1, state: null },
         { id: 'k3', name: 'Match 3', value: 1, state: null }] },
-      { id: 'twovone', game: '2 v 1', dayId: null, items: [
+      { id: 'twovone', game: '2 v 1', items: [
         { id: 't1', name: 'Match 1', value: 1, state: null },
         { id: 't2', name: 'Match 2', value: 1, state: null },
         { id: 't3', name: 'Match 3', value: 1, state: null },
         { id: 't4', name: 'Match 4', value: 1, state: null }] },
-      { id: 'match', game: 'Match Play — the 4 & 2 day', dayId: null, items: [
+      { id: 'match', game: 'Match Play — the 4 & 2 day', items: [
         { id: 'm1', name: 'Singles 1 — the four', value: 1, state: null },
         { id: 'm2', name: 'Singles 2 — the four', value: 1, state: null },
         { id: 'm3', name: 'Singles 3 — the pair', value: 1, state: null }] }
@@ -371,11 +381,14 @@ function cupDefaults() {
     teeSelections: {},
     groups: {},
     holeScores: {},
-    matchups: {},
     // 30 Scores: which players' net scores a team elects to count on each
     // hole — thirty[dayId][hole][personId] = true. Not derivable from the
     // scores themselves; it's the strategic call the game is built on.
-    thirty: {}
+    thirty: {},
+    kp: {},        // Grivey closest-to-pin winner per par 3: kp[dayId][hole] = personId
+    lone: { A: null, B: null },  // 2 v 1: each team's lone player
+    pros: {},      // Pick a Player: pros[personId] = drafted pro's name
+    proScores: {}  // Pick a Player: proScores[dayId][personId][hole] = pro's score to par
   };
 }
 
@@ -390,9 +403,6 @@ function cupHydrate(saved) {
   if (Array.isArray(saved.rounds)) {
     saved.rounds.forEach(sr => {
       const r = out.rounds.find(x => x.id === sr.id); if (!r) return;
-      // A saved null is an older save from before this round had a
-      // scheduled course — let the default stand rather than blanking it.
-      if (sr.dayId != null) r.dayId = sr.dayId;
       (sr.items || []).forEach(si => { const it = r.items.find(x => x.id === si.id); if (it) it.state = si.state; });
     });
   }
@@ -409,8 +419,11 @@ function cupHydrate(saved) {
   if (saved.teeSelections) out.teeSelections = saved.teeSelections;
   if (saved.groups) out.groups = saved.groups;
   if (saved.holeScores) out.holeScores = saved.holeScores;
-  if (saved.matchups) out.matchups = saved.matchups;
   if (saved.thirty) out.thirty = saved.thirty;
+  if (saved.kp) out.kp = saved.kp;
+  if (saved.lone) out.lone = Object.assign(out.lone, saved.lone);
+  if (saved.pros) out.pros = saved.pros;
+  if (saved.proScores) out.proScores = saved.proScores;
   return out;
 }
 
@@ -452,6 +465,10 @@ function cupResolvedPerson(playerId, dayId) {
   const p = state.cup.players.find(x => x.id === playerId);
   if (!p) return null;
   return p.personId || (p.seat ? cupSeatGolferForDay(dayId) : null);
+}
+function cupTeamOfPerson(pid, dayId) {
+  const p = state.cup.players.find(x => cupResolvedPerson(x.id, dayId) === pid);
+  return p ? p.team : null;
 }
 
 // ============================================================
@@ -850,37 +867,142 @@ function cupApplySuggestion(roundId, itemId, s) {
   renderCupBoard(); renderCupRounds();
   saveState(); syncKey('cup');
 }
-function cupSetRoundDay(roundId, dayId) {
-  const r = state.cup.rounds.find(x => x.id === roundId); if (!r) return;
-  r.dayId = dayId || null;
+// A finished or in-progress singles match, rendered the same way
+// wherever one appears.
+function cupMatchLine(roundId, itemId, a, b, dayId, prefix) {
+  if (!a || !b) return `<div class="auto-hint">${prefix || ''}Waiting on the pairing.</div>`;
+  const res = cupMatchPlayResult(a, b, dayId);
+  const names = `${esc(getParticipant(a).name)} v ${esc(getParticipant(b).name)}`;
+  if (!res || !res.thru) return `<div class="auto-hint">${prefix || ''}${names} — no holes scored yet.</div>`;
+  const score = `${res.holesA}–${res.holesB}`;
+  return res.thru < 18
+    ? `<div class="auto-hint">${prefix || ''}${names}, ${score} thru ${res.thru}.</div>`
+    : `<div class="auto-hint">${prefix || ''}${names}, ${score} final.${cupApplyBtn(roundId, itemId, res.winner)}</div>`;
+}
+
+// ---------- Match Play (Royal County Down, the 4 & 2 day) ----------
+// Pairings come straight from the day's groups rather than a second set
+// of dropdowns: the group of four supplies two singles, the pair one.
+// Within a group, team A's players are paired off against team B's in
+// order, so rearranging the groups is what changes the pairings.
+function cupMatchPlayPairs(dayId) {
+  const groups = cupGroupsForDay(dayId);
+  const teamOf = pid => cupTeamOfPerson(pid, dayId);
+  const pairs = [];
+  const problems = [];
+  groups.forEach((g, gi) => {
+    const as = g.filter(pid => teamOf(pid) === 'A');
+    const bs = g.filter(pid => teamOf(pid) === 'B');
+    const n = Math.min(as.length, bs.length);
+    for (let i = 0; i < n; i++) pairs.push({ a: as[i], b: bs[i] });
+    if (as.length !== bs.length) {
+      problems.push(`Group ${gi + 1} has ${as.length} ${cupTeamName('A')} and ${bs.length} ${cupTeamName('B')}`);
+    }
+  });
+  return { pairs, problems };
+}
+
+// ---------- 2 v 1 (Royal Dublin) ----------
+// Each team names a lone player who plays a separate match against each
+// of the two opponents in the other group. Naming the two lone players
+// is all that's needed — the four matches follow from it.
+function cupSetLone(team, pid) {
+  state.cup.lone[team] = pid || null;
   saveState(); syncKey('cup');
   renderCupRounds();
 }
-function cupSetMatchup(itemId, side, val) {
-  if (!state.cup.matchups[itemId]) state.cup.matchups[itemId] = { a: null, b: null };
-  state.cup.matchups[itemId][side] = val || null;
+function cupTwoVOneMatches(dayId) {
+  const loneA = state.cup.lone.A, loneB = state.cup.lone.B;
+  const restA = cupTeamRosterForDay('A', dayId).filter(p => p !== loneA);
+  const restB = cupTeamRosterForDay('B', dayId).filter(p => p !== loneB);
+  const matches = [];
+  if (loneA) restB.forEach(b => matches.push({ a: loneA, b }));
+  if (loneB) restA.forEach(a => matches.push({ a, b: loneB }));
+  return matches; // 4 once both lone players are named
+}
+
+// ---------- Pick a Player (Royal Portrush) ----------
+// Each golfer drafts a pro from a live tournament. A hole goes to
+// whichever side has the lower combined score to par — the pro's gross
+// to par plus the amateur's net to par. Three matches, team A's roster
+// against team B's in order.
+function cupSetPro(pid, name) {
+  state.cup.pros[pid] = name.trim();
   saveState(); syncKey('cup');
   renderCupRounds();
 }
-function cupMatchupPickerHtml(round, item, dayId) {
-  const day = DAYS.find(d => d.id === dayId);
-  const golfers = (day && day.golf) ? day.golf.golfers : [];
-  const mu = state.cup.matchups[item.id] || { a: null, b: null };
-  const opt = sel => `<option value="">Pick…</option>` + golfers.map(pid => `<option value="${pid}" ${sel === pid ? 'selected' : ''}>${esc(getParticipant(pid).name)}</option>`).join('');
-  let resultHtml = '';
-  if (mu.a && mu.b) {
-    const res = cupMatchPlayResult(mu.a, mu.b, dayId);
-    if (res && res.thru > 0) {
-      resultHtml = res.thru < 18
-        ? `${esc(getParticipant(mu.a).name)} ${res.holesA} – ${res.holesB} ${esc(getParticipant(mu.b).name)}, thru ${res.thru}`
-        : `${esc(getParticipant(mu.a).name)} ${res.holesA} – ${res.holesB} ${esc(getParticipant(mu.b).name)} — final.${cupApplyBtn(round.id, item.id, res.winner)}`;
-    } else resultHtml = 'No holes scored yet for this pairing.';
+function cupProToPar(dayId, pid, hole) {
+  const d = state.cup.proScores[dayId];
+  const v = d && d[pid] && d[pid][hole];
+  return (v == null || v === '') ? null : Number(v);
+}
+function cupAdjustProToPar(dayId, pid, hole, delta) {
+  if (!state.cup.proScores[dayId]) state.cup.proScores[dayId] = {};
+  if (!state.cup.proScores[dayId][pid]) state.cup.proScores[dayId][pid] = {};
+  const cur = cupProToPar(dayId, pid, hole);
+  state.cup.proScores[dayId][pid][hole] = (cur == null ? 0 : cur) + delta;
+  saveState(); syncKey('cup');
+  renderCupLivePanel(); renderCupRounds();
+}
+function cupClearProToPar(dayId, pid, hole) {
+  const d = state.cup.proScores[dayId];
+  if (d && d[pid]) { delete d[pid][hole]; saveState(); syncKey('cup'); renderCupLivePanel(); renderCupRounds(); }
+}
+// Combined score to par for one side on one hole: pro's to par plus the
+// amateur's net relative to the par he's playing off.
+function cupPickSideToPar(dayId, pid, hole) {
+  const pro = cupProToPar(dayId, pid, hole);
+  const net = cupNetForHole(pid, dayId, hole);
+  if (pro == null || net == null) return null;
+  const prof = state.cup.golferProfiles[pid] || {};
+  const holeData = CUP_COURSES[dayId].holes.find(h => h.num === hole);
+  const par = prof.ratingSet === 'women' ? holeData.parWomen : holeData.parMen;
+  return pro + (net - par);
+}
+function cupPickMatchResult(a, b, dayId) {
+  let holesA = 0, holesB = 0, thru = 0;
+  for (let h = 1; h <= 18; h++) {
+    const sa = cupPickSideToPar(dayId, a, h), sb = cupPickSideToPar(dayId, b, h);
+    if (sa == null || sb == null) continue;
+    thru++;
+    if (sa < sb) holesA++; else if (sb < sa) holesB++;
   }
-  return `<div class="auto-hint matchup-row">
-    <select onchange="cupSetMatchup('${item.id}','a',this.value)" aria-label="${esc(item.name)} player A">${opt(mu.a)}</select> vs
-    <select onchange="cupSetMatchup('${item.id}','b',this.value)" aria-label="${esc(item.name)} player B">${opt(mu.b)}</select>
-    <div style="margin-top:4px">${resultHtml}</div>
-  </div>`;
+  const winner = thru < 18 ? null : (holesA > holesB ? 'A' : holesB > holesA ? 'B' : 'T');
+  return { holesA, holesB, thru, winner };
+}
+function cupPickMatches(dayId) {
+  const as = cupTeamRosterForDay('A', dayId), bs = cupTeamRosterForDay('B', dayId);
+  const out = [];
+  for (let i = 0; i < Math.min(as.length, bs.length); i++) out.push({ a: as[i], b: bs[i] });
+  return out;
+}
+
+// ---------- Grivey closest-to-pin ----------
+function cupKpWinner(dayId, hole) {
+  const d = state.cup.kp[dayId];
+  return (d && d[hole]) || null;
+}
+function cupSetKp(dayId, hole, pid) {
+  if (!state.cup.kp[dayId]) state.cup.kp[dayId] = {};
+  if (state.cup.kp[dayId][hole] === pid) delete state.cup.kp[dayId][hole];
+  else state.cup.kp[dayId][hole] = pid;
+  saveState(); syncKey('cup');
+  renderCupLivePanel(); renderCupRounds();
+}
+function cupParThreeHoles(dayId) {
+  return CUP_COURSES[dayId].holes.filter(h => h.parMen === 3).map(h => h.num);
+}
+function cupKpTally(dayId) {
+  const rosterA = cupTeamRosterForDay('A', dayId), rosterB = cupTeamRosterForDay('B', dayId);
+  let a = 0, b = 0, decided = 0;
+  const holes = cupParThreeHoles(dayId);
+  holes.forEach(h => {
+    const w = cupKpWinner(dayId, h);
+    if (!w) return;
+    decided++;
+    if (rosterA.includes(w)) a++; else if (rosterB.includes(w)) b++;
+  });
+  return { a, b, decided, total: holes.length, winner: decided < holes.length ? null : (a > b ? 'A' : b > a ? 'B' : 'T') };
 }
 function cupThirtyTeamLine(team, s) {
   const label = esc(cupTeamName(team));
@@ -894,9 +1016,45 @@ function cupThirtyTeamLine(team, s) {
     <span class="tl-total">${s.counted ? 'net ' + s.total : ''}</span>${flag}</div>`;
 }
 function cupItemAutoHtml(round, item) {
-  const dayId = round.dayId;
-  if (round.id === 'pick') return '';
-  if (!dayId) return `<div class="auto-hint">Pick the round above and this scores itself from the hole scores.</div>`;
+  const dayId = CUP_GAME_DAY[round.id];
+  const itemIdx = round.items.indexOf(item);
+
+  if (round.id === 'match') {
+    const { pairs, problems } = cupMatchPlayPairs(dayId);
+    if (problems.length && itemIdx === 0) {
+      return `<div class="auto-hint"><b class="over">${esc(problems.join('; '))}</b> — even the groups up in Live Scoring and the three singles fall out of them.</div>`;
+    }
+    const pair = pairs[itemIdx];
+    if (!pair) return `<div class="auto-hint">Set the groups in Live Scoring — the group of four gives two singles, the pair gives one.</div>`;
+    return cupMatchLine(round.id, item.id, pair.a, pair.b, dayId);
+  }
+
+  if (round.id === 'twovone') {
+    const matches = cupTwoVOneMatches(dayId);
+    if (itemIdx === 0 && (!state.cup.lone.A || !state.cup.lone.B)) {
+      return `<div class="auto-hint">${cupLonePickerHtml(dayId)}</div>`;
+    }
+    const m = matches[itemIdx];
+    if (!m) return `<div class="auto-hint">Name both lone players above.</div>`;
+    const lone = m.a === state.cup.lone.A ? m.a : m.b;
+    return cupMatchLine(round.id, item.id, m.a, m.b, dayId, `<span class="lone-tag">${esc(getParticipant(lone).name)} alone</span> `);
+  }
+
+  if (round.id === 'pick') {
+    if (itemIdx === 0) {
+      const missing = cupPickMatches(dayId).flatMap(m => [m.a, m.b]).filter(p => !state.cup.pros[p]);
+      if (missing.length) return `<div class="auto-hint">${cupProDraftHtml(dayId)}</div>`;
+    }
+    const m = cupPickMatches(dayId)[itemIdx];
+    if (!m) return `<div class="auto-hint">Waiting on the draft.</div>`;
+    const res = cupPickMatchResult(m.a, m.b, dayId);
+    const label = pid => `${esc(getParticipant(pid).name)}${state.cup.pros[pid] ? ' + ' + esc(state.cup.pros[pid]) : ''}`;
+    const names = `${label(m.a)} v ${label(m.b)}`;
+    if (!res.thru) return `<div class="auto-hint">${names} — enter the pros' hole scores in Live Scoring.</div>`;
+    return res.thru < 18
+      ? `<div class="auto-hint">${names}, ${res.holesA}–${res.holesB} thru ${res.thru}.</div>`
+      : `<div class="auto-hint">${names}, ${res.holesA}–${res.holesB} final.${cupApplyBtn(round.id, item.id, res.winner)}</div>`;
+  }
 
   if (round.id === 'r30') {
     const r = cupThirtyResult(dayId);
@@ -909,7 +1067,11 @@ function cupItemAutoHtml(round, item) {
   }
 
   if (round.id === 'grivey') {
-    if (item.id === 'g4') return `<div class="auto-hint">Closest to the pin — tap the winner yourself.</div>`;
+    if (item.id === 'g4') {
+      const k = cupKpTally(dayId);
+      const line = `${esc(cupTeamName('A'))} ${k.a} · ${esc(cupTeamName('B'))} ${k.b} — ${k.decided}/${k.total} par 3s called.`;
+      return `<div class="auto-hint">${line}${k.winner ? cupApplyBtn(round.id, item.id, k.winner) : ' Call each one in Live Scoring.'}</div>`;
+    }
     const g = cupGriveyAutoResults(dayId);
     if (!g) return `<div class="auto-hint">Ready once all six golfers have a full 18 holes entered.</div>`;
     if (item.id === 'g1') return `<div class="auto-hint">Lowest net total.${cupApplyBtn(round.id, item.id, g.lowIndiv)}</div>`;
@@ -922,33 +1084,51 @@ function cupItemAutoHtml(round, item) {
     if (item.id === 'd1') return `<div class="auto-hint">High + low best ball, ${d.bestBall.holesA}–${d.bestBall.holesB} thru ${d.bestBall.thru}.${cupApplyBtn(round.id, item.id, d.bestBall.winner)}</div>`;
     if (item.id === 'd2') return `<div class="auto-hint">Mids: ${esc(getParticipant(d.midA).name)} v ${esc(getParticipant(d.midB).name)}, ${d.mids.holesA}–${d.mids.holesB} thru ${d.mids.thru}.${cupApplyBtn(round.id, item.id, d.mids.winner)}</div>`;
   }
-  if (round.id === 'match' || round.id === 'twovone') return cupMatchupPickerHtml(round, item, dayId);
   return '';
 }
+function cupLonePickerHtml(dayId) {
+  const sel = team => {
+    const roster = cupTeamRosterForDay(team, dayId);
+    const cur = state.cup.lone[team];
+    const opts = `<option value="">Pick…</option>` + roster.map(pid =>
+      `<option value="${pid}" ${cur === pid ? 'selected' : ''}>${esc(getParticipant(pid).name)}</option>`).join('');
+    return `<label class="lone-sel">${esc(cupTeamName(team))} alone
+      <select onchange="cupSetLone('${team}',this.value)" aria-label="${esc(cupTeamName(team))} lone player">${opts}</select></label>`;
+  };
+  return `<div class="lone-row">${sel('A')}${sel('B')}</div>
+    <div style="margin-top:4px">Each lone player takes on both opponents in the other group — four matches.</div>`;
+}
+function cupProDraftHtml(dayId) {
+  const rows = cupPickMatches(dayId).flatMap(m => [m.a, m.b]).map(pid =>
+    `<label class="pro-sel">${esc(getParticipant(pid).name)}
+      <input type="text" value="${esc(state.cup.pros[pid] || '')}" placeholder="pro drafted"
+        onchange="cupSetPro('${pid}',this.value)" aria-label="${esc(getParticipant(pid).name)}'s drafted pro"></label>`).join('');
+  return `<div class="pro-draft">${rows}</div>
+    <div style="margin-top:6px">Then enter each pro's score to par hole by hole in Live Scoring.</div>`;
+}
 function renderCupRounds() {
-  const dayOptions = Object.values(CUP_ROUND_DAYS);
-  document.getElementById('cup-rounds').innerHTML = state.cup.rounds.map((r, idx) => {
+  // Now that every game has a fixed course, show them in the order
+  // they'll actually be played rather than the order they're defined.
+  const dayOrder = Object.values(CUP_ROUND_DAYS);
+  const inPlayOrder = state.cup.rounds.slice()
+    .sort((x, y) => dayOrder.indexOf(CUP_GAME_DAY[x.id]) - dayOrder.indexOf(CUP_GAME_DAY[y.id]));
+  document.getElementById('cup-rounds').innerHTML = inPlayOrder.map((r, idx) => {
     const tot = cupRoundTotals(r);
     const worth = r.items.reduce((a, b) => a + b.value, 0);
-    const dayOpts = dayOptions.map(dId => `<option value="${dId}" ${r.dayId === dId ? 'selected' : ''}>${esc(COURSE_SHORT[dId] || dId)}</option>`).join('');
+    const dayId = CUP_GAME_DAY[r.id];
+    const day = DAYS.find(d => d.id === dayId);
     const items = r.items.map(it => `
       <div class="item">
         <span class="lbl">${esc(it.name)}${it.value > 1 ? `<span class="worth">${it.value} pts</span>` : ''}</span>
         ${cupSegHTML(r.id, it)}
       </div>
       ${cupItemAutoHtml(r, it)}`).join('');
-    const dayPickerHtml = (r.id === 'pick') ? '' : `<div class="round-day-row">
-        <label for="round-day-${r.id}">Played on</label>
-        <select id="round-day-${r.id}" onchange="cupSetRoundDay('${r.id}',this.value)">
-          <option value="">Not assigned</option>${dayOpts}
-        </select>
-      </div>`;
     return `<div class="card">
       <header>
         <div class="gname"><span class="no">G${idx + 1}</span>${esc(r.game)}</div>
         <div class="rsub"><span class="pts">${cupFmt(tot.A)} – ${cupFmt(tot.B)}</span><span>of ${worth}</span></div>
       </header>
-      ${dayPickerHtml}
+      <div class="round-course">${esc(COURSE_SHORT[dayId] || '')}${day ? ' · ' + esc(day.date.replace(/\(.*\)/, '').trim()) : ''}</div>
       <div class="items">${items}</div>
     </div>`;
   }).join('');
@@ -1096,6 +1276,14 @@ function cupDefaultGroups(dayId) {
   const day = DAYS.find(d => d.id === dayId);
   if (!day || !day.golf) return [[], []];
   const g = day.golf.golfers;
+  // The 4 & 2 day carries the singles pairings, so each group has to hold
+  // equal numbers from both teams — the four give two matches, the pair
+  // gives one. Interleave rather than slice.
+  if (dayId === CUP_GAME_DAY.match) {
+    const as = g.filter(pid => cupTeamOfPerson(pid, dayId) === 'A');
+    const bs = g.filter(pid => cupTeamOfPerson(pid, dayId) === 'B');
+    if (as.length === 3 && bs.length === 3) return [[as[0], bs[0], as[1], bs[1]], [as[2], bs[2]]];
+  }
   const firstSize = CUP_GROUP_FIRST_SIZE[dayId] || 3;
   return [g.slice(0, firstSize), g.slice(firstSize)];
 }
@@ -1181,8 +1369,7 @@ function cupLiveLeaderboardHtml(dayId) {
 // counts for their team on this hole. Only appears on the round the
 // game is scheduled for.
 function cupThirtyPickerHtml(dayId, hole) {
-  const round = state.cup.rounds.find(r => r.id === 'r30');
-  if (!round || round.dayId !== dayId) return '';
+  if (dayId !== CUP_GAME_DAY.r30) return '';
   const teamBlock = team => {
     const roster = cupTeamRosterForDay(team, dayId);
     if (!roster.length) return '';
@@ -1205,6 +1392,51 @@ function cupThirtyPickerHtml(dayId, hole) {
   return `<div class="t30-panel">
     <div class="t30-head">30 Scores — whose score counts on hole ${hole}</div>
     ${teamBlock('A')}${teamBlock('B')}
+  </div>`;
+}
+
+// Grivey's closest-to-pin, on the par 3s of the round it's played on.
+function cupKpPickerHtml(dayId, hole) {
+  if (dayId !== CUP_GAME_DAY.grivey) return '';
+  const holeData = CUP_COURSES[dayId].holes.find(h => h.num === hole);
+  if (!holeData || holeData.parMen !== 3) return '';
+  const day = DAYS.find(d => d.id === dayId);
+  const winner = cupKpWinner(dayId, hole);
+  const k = cupKpTally(dayId);
+  const picks = day.golf.golfers.map(pid =>
+    `<button type="button" class="t30-pick ${winner === pid ? 'on' : ''}"
+      onclick="cupSetKp('${dayId}',${hole},'${pid}')" aria-pressed="${winner === pid}"
+      aria-label="${esc(getParticipant(pid).name)} won closest to the pin on hole ${hole}">${esc(getParticipant(pid).name)}</button>`).join('');
+  return `<div class="t30-panel">
+    <div class="t30-head">Closest to the pin — hole ${hole}<span class="t30-count">${k.decided}/${k.total} called</span></div>
+    <div class="t30-picks">${picks}</div>
+  </div>`;
+}
+
+// Pick a Player: each drafted pro's score to par, hole by hole.
+function cupProPickerHtml(dayId, hole) {
+  if (dayId !== CUP_GAME_DAY.pick) return '';
+  const entries = cupPickMatches(dayId).flatMap(m => [m.a, m.b]);
+  if (!entries.length) return '';
+  const rows = entries.map(pid => {
+    const pro = state.cup.pros[pid];
+    const v = cupProToPar(dayId, pid, hole);
+    // Golf notation: level par is E, so an unentered hole shows a greyed
+    // E to tap rather than a dash that reads like the minus beside it.
+    const shown = v == null || v === 0 ? 'E' : (v > 0 ? '+' + v : String(v));
+    return `<div class="pro-row">
+      <div class="pro-name">${esc(getParticipant(pid).name)}<small>${pro ? esc(pro) : 'no pro drafted'}</small></div>
+      <div class="lsr-stepper">
+        <button type="button" onclick="cupAdjustProToPar('${dayId}','${pid}',${hole},-1)" aria-label="Lower ${esc(pro || 'pro')} on hole ${hole}">−</button>
+        <button type="button" class="lsr-gross ${v == null ? 'pending' : ''}" onclick="${v == null ? `cupAdjustProToPar('${dayId}','${pid}',${hole},0)` : `cupClearProToPar('${dayId}','${pid}',${hole})`}"
+          title="${v == null ? 'Tap for level par' : 'Clear'}">${shown}</button>
+        <button type="button" onclick="cupAdjustProToPar('${dayId}','${pid}',${hole},1)" aria-label="Raise ${esc(pro || 'pro')} on hole ${hole}">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="t30-panel">
+    <div class="t30-head">Pick a Player — pros' scores to par on hole ${hole}</div>
+    ${rows}
   </div>`;
 }
 
@@ -1285,6 +1517,8 @@ function renderCupLivePanel() {
     <div class="hole-nav-jump">${jumpStrip}</div>
     <div class="live-score-rows">${scoreRows}</div>
     ${cupThirtyPickerHtml(dayId, hole)}
+    ${cupKpPickerHtml(dayId, hole)}
+    ${cupProPickerHtml(dayId, hole)}
     <div class="save-state">${cupSaveStatusText()}</div>
     ${cupLiveLeaderboardHtml(dayId)}`;
 }

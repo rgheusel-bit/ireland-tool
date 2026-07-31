@@ -82,9 +82,6 @@
 #cup-tracker .item .lbl{font-size:13.5px; min-width:0;}
 #cup-tracker .item .worth{font-size:10.5px; color:var(--muted); margin-left:7px; letter-spacing:.04em;}
 
-#cup-tracker .round-day-row{display:flex; align-items:center; gap:8px; padding:9px 18px; border-bottom:1px solid var(--hair); font-size:11.5px; color:var(--muted);}
-#cup-tracker .round-day-row label{font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:10px;}
-#cup-tracker .round-day-row select{border:1px solid var(--line); border-radius:7px; padding:4px 8px; font:inherit; font-size:12px; background:#fff; color:var(--ink);}
 #cup-tracker .auto-hint{font-size:11px; color:var(--muted); padding:0 8px 10px; margin-top:-2px;}
 #cup-tracker .auto-hint.matchup-row select{border:1px solid var(--line); border-radius:7px; padding:3px 6px; font:inherit; font-size:11.5px; background:#fff; color:var(--ink); margin:0 3px;}
 #cup-tracker button.apply-btn{appearance:none; border:1px solid var(--green-line); background:var(--green-wash); color:var(--green-2); font:inherit; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; cursor:pointer; margin-left:6px;}
@@ -207,6 +204,18 @@
 #cup-tracker .lsr-pending-hint{font-size:10px; color:var(--ink-faint); font-style:italic;}
 #cup-tracker .lsr-result{width:64px; text-align:right; font-size:11px; color:var(--ink-soft); flex-shrink:0;}
 #cup-tracker .lsr-result b{display:block; font-size:13px; color:var(--ink);}
+#cup-tracker .round-course{padding:8px 18px; border-bottom:1px solid var(--hair); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--brass);}
+#cup-tracker .lone-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:2px;}
+#cup-tracker .lone-sel, #cup-tracker .pro-sel{display:flex; flex-direction:column; gap:3px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-faint); flex:1 1 130px;}
+#cup-tracker .lone-sel select, #cup-tracker .pro-sel input{border:1px solid var(--line); border-radius:7px; padding:5px 7px; font:inherit; font-size:12.5px; font-weight:500; text-transform:none; letter-spacing:0; background:#fff; color:var(--ink);}
+#cup-tracker .lone-sel select:focus, #cup-tracker .pro-sel input:focus{outline:none; border-color:var(--green-3);}
+#cup-tracker .lone-tag{display:inline-block; background:var(--brass-wash); border:1px solid var(--brass-line); color:var(--brass); border-radius:5px; padding:0 5px; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-right:4px; vertical-align:1px;}
+#cup-tracker .pro-draft{display:flex; gap:8px; flex-wrap:wrap;}
+#cup-tracker .pro-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0;}
+#cup-tracker .pro-row + .pro-row{border-top:1px solid var(--hair);}
+#cup-tracker .pro-name{font-size:12.5px; font-weight:700; color:var(--ink);}
+#cup-tracker .pro-name small{display:block; font-weight:500; font-size:10.5px; color:var(--ink-faint); margin-top:1px;}
+
 /* ---------- 30 Scores ---------- */
 #cup-tracker .t30-panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:12px 14px; margin-bottom:16px;}
 #cup-tracker .t30-head{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px; color:var(--ink-faint); margin-bottom:10px;}
