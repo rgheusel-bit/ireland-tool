@@ -1266,7 +1266,15 @@ function cupSetTeeSelection(dayId, pid, teeId) {
 // ============================================================
 // RENDER — Live Scoring (Golf-Genius-style hole-by-hole entry)
 // ============================================================
-let cupLiveView = { dayId: null, groupIdx: 0, hole: 1 };
+// Where Live Scoring was left. Kept on the device (state.cupView, which
+// isn't a synced key) so a refresh in the middle of a round comes back to
+// the same hole rather than resetting to the first, without moving anyone
+// else's screen.
+let cupLiveView = Object.assign({ dayId: null, groupIdx: 0, hole: 1 }, state.cupView || {});
+function cupRememberView() {
+  state.cupView = { dayId: cupLiveView.dayId, groupIdx: cupLiveView.groupIdx, hole: cupLiveView.hole };
+  saveState();
+}
 
 // Groups default to an even 3/3 split, except where the day's format
 // calls for something else: Royal County Down is the trip's "4 & 2 day"
@@ -1300,9 +1308,9 @@ function cupSwapGroup(dayId, pid) {
   saveState(); syncKey('cup');
   renderCupLivePanel();
 }
-function cupSetLiveRound(dayId) { cupLiveView.dayId = dayId; cupLiveView.groupIdx = 0; cupLiveView.hole = 1; renderCupLivePanel(); }
-function cupSetLiveGroup(idx) { cupLiveView.groupIdx = idx; renderCupLivePanel(); }
-function cupSetLiveHole(n) { if (n < 1 || n > 18) return; cupLiveView.hole = n; renderCupLivePanel(); }
+function cupSetLiveRound(dayId) { cupLiveView.dayId = dayId; cupLiveView.groupIdx = 0; cupLiveView.hole = 1; cupRememberView(); renderCupLivePanel(); }
+function cupSetLiveGroup(idx) { cupLiveView.groupIdx = idx; cupRememberView(); renderCupLivePanel(); }
+function cupSetLiveHole(n) { if (n < 1 || n > 18) return; cupLiveView.hole = n; cupRememberView(); renderCupLivePanel(); }
 
 // Par for this golfer on this hole — the starting point every score
 // is entered relative to.
@@ -1643,6 +1651,12 @@ document.getElementById('cup-resetBtn').addEventListener('click', () => {
 });
 
 const CUP_SUBTABS = [['cup-subtab-ryder', 'cup-panel-ryder'], ['cup-subtab-sf', 'cup-panel-sf'], ['cup-subtab-hcp', 'cup-panel-hcp'], ['cup-subtab-live', 'cup-panel-live']];
+const CUP_SUBTAB_RENDER = {
+  'cup-subtab-ryder': () => { renderCupBoard(); renderCupRounds(); },
+  'cup-subtab-sf':    () => { renderCupStandings(); renderCupSFTable(); },
+  'cup-subtab-hcp':   renderCupHcpPanel,
+  'cup-subtab-live':  renderCupLivePanel,
+};
 CUP_SUBTABS.forEach(([tid, pid]) => {
   document.getElementById(tid).addEventListener('click', () => {
     CUP_SUBTABS.forEach(([t, p]) => {
@@ -1650,6 +1664,11 @@ CUP_SUBTABS.forEach(([tid, pid]) => {
       document.getElementById(t).setAttribute('aria-selected', sel);
       document.getElementById(p).classList.toggle('active', sel);
     });
+    // Every panel reads off scores entered in Live Scoring, so redraw the
+    // one being opened. Without this it shows whatever was true when it
+    // was last rendered — enter a round's scores, switch to Ryder Cup,
+    // and the games would still claim nothing had been played.
+    (CUP_SUBTAB_RENDER[tid] || function () {})();
   });
 });
 

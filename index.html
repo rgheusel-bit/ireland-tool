@@ -1238,6 +1238,13 @@ let state = {
   customMeals: {},
   hiddenMeals: [],
   scheduleFilter: "",
+  // When each synced key last changed on this device. Local only — it's
+  // what stops an older copy from the server winning on reconnect.
+  syncAt: {},
+  // Which round, group and hole Live Scoring was left on. Local only, so
+  // a refresh mid-round comes back where you were instead of hole 1, and
+  // without dragging anyone else's screen along.
+  cupView: null,
 };
 
 // ============================================================
@@ -1277,6 +1284,7 @@ function loadState() {
   }
   if (loaded) {
     Object.assign(state, loaded);
+    if (!state.syncAt || typeof state.syncAt !== "object") state.syncAt = {};
     if (state.currentUser && state.activities && Object.keys(state.activities).length) {
       if (!state.userInterests[state.currentUser]) {
         state.userInterests[state.currentUser] = Object.assign({}, state.activities);
@@ -1378,20 +1386,47 @@ function initFirebase() {
   document.head.appendChild(s1);
 }
 
+// Whichever copy of a key was written last wins. Without this, a phone
+// that scored a few holes out of signal would reconnect and have the
+// server's older copy pulled straight over the top of them.
+function remoteIsStale(key, data) {
+  const remoteAt = data && data.at;
+  const localAt = state.syncAt && state.syncAt[key];
+  if (!localAt) return false;          // nothing local to protect
+  if (!remoteAt) return true;          // undated remote can't beat a dated local
+  return remoteAt < localAt;
+}
+
+// Anything that replaces state wholesale from the server has to put it
+// back through the cup hydrator — a payload written by an older version
+// of the app won't have the newer game keys on it, and the UI reads them
+// directly — and then redraw whatever tab is open.
+function afterExternalStateUpdate() {
+  normalizeArrayKeys();
+  if (typeof cupHydrate === 'function') state.cup = cupHydrate(state.cup);
+  saveState();
+  renderAll();
+  const activePane = document.querySelector('.tab-pane.active');
+  if (activePane?.id === 'tab-van') renderVanTab();
+  if (activePane?.id === 'tab-people') renderPeopleTab();
+  if (activePane?.id === 'tab-flights') renderFlightsTab();
+  if (activePane?.id === 'tab-cup' && typeof renderCupAll === 'function') renderCupAll();
+}
+
 async function loadFromFirebase() {
   if (!db) return;
   try {
     const snapshot = await db.ref('ireland2026').get();
     if (snapshot.exists()) {
       snapshot.forEach(child => {
-        if (SYNCED_KEYS.includes(child.key)) {
-          const data = child.val();
-          state[child.key] = data && data.v !== undefined ? data.v : data;
-        }
+        const key = child.key;
+        if (!SYNCED_KEYS.includes(key)) return;
+        const data = child.val();
+        if (remoteIsStale(key, data)) return;
+        state[key] = data && data.v !== undefined ? data.v : data;
+        if (data && data.at) state.syncAt[key] = data.at;
       });
-      normalizeArrayKeys();
-      saveState();
-      renderAll();
+      afterExternalStateUpdate();
     }
     setSyncStatus('connected');
   } catch(e) {
@@ -1401,13 +1436,16 @@ async function loadFromFirebase() {
 }
 
 async function syncKey(key) {
-  if (!db || !SYNCED_KEYS.includes(key)) return;
+  if (!SYNCED_KEYS.includes(key)) return;
+  // Stamp the change locally first and whether or not there's a
+  // connection, so work done out of signal still counts as the newest
+  // version of this key when the phone reconnects.
+  const at = new Date().toISOString();
+  state.syncAt[key] = at;
+  saveState();
+  if (!db) return;
   try {
-    await db.ref('ireland2026/' + key).set({
-      v:  state[key],
-      by: state.currentUser || '',
-      at: new Date().toISOString()
-    });
+    await db.ref('ireland2026/' + key).set({ v: state[key], by: state.currentUser || '', at });
   } catch(e) { console.warn('syncKey failed:', e); }
 }
 
@@ -1422,14 +1460,10 @@ function subscribeRealtime() {
     const data = snapshot.val();
     if (!SYNCED_KEYS.includes(key) || !data) return;
     if (data.by && data.by === state.currentUser) return;
+    if (remoteIsStale(key, data)) return;
     state[key] = data.v !== undefined ? data.v : data;
-    normalizeArrayKeys();
-    saveState();
-    renderAll();
-    const activePane = document.querySelector('.tab-pane.active');
-    if (activePane?.id === 'tab-van') renderVanTab();
-    if (activePane?.id === 'tab-people') renderPeopleTab();
-    if (activePane?.id === 'tab-cup' && typeof renderCupAll === 'function') renderCupAll();
+    if (data.at) state.syncAt[key] = data.at;
+    afterExternalStateUpdate();
     showSyncToast(data.by);
   };
 
