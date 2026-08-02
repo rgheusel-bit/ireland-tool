@@ -1376,7 +1376,7 @@ function initFirebase() {
         firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.database();
         setSyncStatus('connecting');
-        loadFromFirebase().then(() => subscribeRealtime());
+        loadFromFirebase().then(() => { subscribeRealtime(); subscribeLive(); });
       } catch(e) { console.warn('Firebase init failed:', e); setSyncStatus('offline'); }
     };
     s2.onerror = () => setSyncStatus('offline');
@@ -1423,7 +1423,11 @@ async function loadFromFirebase() {
         if (!SYNCED_KEYS.includes(key)) return;
         const data = child.val();
         if (remoteIsStale(key, data)) return;
-        state[key] = data && data.v !== undefined ? data.v : data;
+        const incoming = data && data.v !== undefined ? data.v : data;
+        // The cup blob deliberately no longer carries the per-hole data,
+        // so merge rather than assign or it would blank it out.
+        if (key === 'cup' && typeof cupMergeRemote === 'function') cupMergeRemote(incoming);
+        else state[key] = incoming;
         if (data && data.at) state.syncAt[key] = data.at;
       });
       afterExternalStateUpdate();
@@ -1435,7 +1439,7 @@ async function loadFromFirebase() {
   }
 }
 
-async function syncKey(key) {
+async function syncKey(key, valueOverride) {
   if (!SYNCED_KEYS.includes(key)) return;
   // Stamp the change locally first and whether or not there's a
   // connection, so work done out of signal still counts as the newest
@@ -1444,9 +1448,40 @@ async function syncKey(key) {
   state.syncAt[key] = at;
   saveState();
   if (!db) return;
+  const v = valueOverride !== undefined ? valueOverride : state[key];
   try {
-    await db.ref('ireland2026/' + key).set({ v: state[key], by: state.currentUser || '', at });
+    await db.ref('ireland2026/' + key).set({ v, by: state.currentUser || '', at });
   } catch(e) { console.warn('syncKey failed:', e); }
+}
+
+// ---- per-leaf sync -------------------------------------------------
+// Anything several people write at once can't go through a
+// whole-object key: two phones scoring different groups would each push
+// a copy containing only their own work and overwrite the other's.
+// These write one value at its own path instead, so the server merges
+// them and concurrent edits to different holes never collide.
+const LIVE_ROOT = 'ireland2026live';
+
+function syncLeaf(path, value) {
+  if (!db) return;
+  db.ref(LIVE_ROOT + '/' + path).set(value === undefined ? null : value)
+    .catch(e => console.warn('syncLeaf failed:', path, e));
+  db.ref(LIVE_ROOT + '/meta').set({ by: state.currentUser || '', at: new Date().toISOString() })
+    .catch(() => {});
+}
+
+function subscribeLive() {
+  if (!db) return;
+  db.ref(LIVE_ROOT).on('value', snapshot => {
+    const data = snapshot.val() || {};
+    if (typeof cupApplyLive !== 'function') return;
+    const changed = cupApplyLive(data);
+    if (!changed) return;
+    saveState();
+    const activePane = document.querySelector('.tab-pane.active');
+    if (activePane?.id === 'tab-cup' && typeof renderCupAll === 'function') renderCupAll();
+    if (data.meta && data.meta.by && data.meta.by !== state.currentUser) showSyncToast(data.meta.by);
+  });
 }
 
 function subscribeRealtime() {
@@ -1461,7 +1496,9 @@ function subscribeRealtime() {
     if (!SYNCED_KEYS.includes(key) || !data) return;
     if (data.by && data.by === state.currentUser) return;
     if (remoteIsStale(key, data)) return;
-    state[key] = data.v !== undefined ? data.v : data;
+    const incoming = data.v !== undefined ? data.v : data;
+    if (key === 'cup' && typeof cupMergeRemote === 'function') cupMergeRemote(incoming);
+    else state[key] = incoming;
     if (data.at) state.syncAt[key] = data.at;
     afterExternalStateUpdate();
     showSyncToast(data.by);

@@ -427,6 +427,79 @@ function cupHydrate(saved) {
   return out;
 }
 
+// ---------- sync split -------------------------------------------------
+// Everything several people touch at once during a round — hole scores,
+// 30 Scores picks, closest-to-pin calls, the pros' scores — syncs one
+// value at a time at its own path. The rest (teams, handicaps, tees,
+// groups, lone players, drafted pros, applied points) is set up once by
+// one person and rides along as a single object.
+//
+// This split matters: two group scorers each pushing a whole cup object
+// would each be pushing a copy that only contains their own group's
+// work, and would take turns wiping the other's scores.
+const CUP_LIVE_FIELDS = ['holeScores', 'thirty', 'kp', 'proScores'];
+
+function cupBlob() {
+  const out = {};
+  Object.keys(state.cup).forEach(k => { if (!CUP_LIVE_FIELDS.includes(k)) out[k] = state.cup[k]; });
+  return out;
+}
+function cupSync() { syncKey('cup', cupBlob()); }
+function cupSyncLeaf(field, parts, value) {
+  if (typeof syncLeaf !== 'function') return;
+  syncLeaf(parts.length ? field + '/' + parts.join('/') : field, value);
+}
+// Firebase hands back an array whenever a node's keys look like indexes,
+// which hole numbers do. Put those back to plain objects so lookups by
+// hole keep working and empty slots don't appear as nulls.
+function cupPlainObject(v) {
+  if (v == null || typeof v !== 'object') return v;
+  const out = {};
+  (Array.isArray(v) ? v.map((x, i) => [String(i), x]) : Object.entries(v))
+    .forEach(([k, val]) => { if (val !== null && val !== undefined) out[k] = cupPlainObject(val); });
+  return out;
+}
+// A blob arriving from someone else must not blank the per-hole data,
+// which it no longer carries.
+function cupMergeRemote(remote) {
+  const keep = {};
+  CUP_LIVE_FIELDS.forEach(f => { keep[f] = state.cup && state.cup[f]; });
+  state.cup = cupHydrate(Object.assign({}, remote || {}, keep));
+}
+// Merge the shared subtree into this phone rather than replacing with
+// it. What the server has wins, but anything only this phone has is kept
+// and pushed up — a round scored before the app could reach the network
+// would otherwise be erased the moment it connected.
+function cupMergeLiveNode(local, incoming, path, pushes) {
+  const out = {};
+  const keys = new Set(Object.keys(local || {}).concat(Object.keys(incoming || {})));
+  keys.forEach(k => {
+    const l = local ? local[k] : undefined;
+    const i = incoming ? incoming[k] : undefined;
+    const lObj = l && typeof l === 'object', iObj = i && typeof i === 'object';
+    if (lObj || iObj) out[k] = cupMergeLiveNode(lObj ? l : {}, iObj ? i : {}, path.concat(k), pushes);
+    else if (i !== undefined) out[k] = i;
+    else { out[k] = l; pushes.push({ path: path.concat(k), value: l }); }
+  });
+  return out;
+}
+function cupApplyLive(data) {
+  if (!state.cup) return false;
+  let changed = false;
+  const pushes = [];
+  CUP_LIVE_FIELDS.forEach(f => {
+    const local = state.cup[f] || {};
+    const merged = cupMergeLiveNode(local, cupPlainObject(data[f]) || {}, [f], pushes);
+    if (JSON.stringify(merged) === JSON.stringify(local)) return;
+    state.cup[f] = merged;
+    changed = true;
+  });
+  // Send up whatever this phone had that the server didn't. These settle
+  // on the next round trip, when the server already holds them.
+  pushes.forEach(p => cupSyncLeaf(p.path[0], p.path.slice(1), p.value));
+  return changed;
+}
+
 const cupFmt = n => Number.isInteger(n) ? String(n) : n.toFixed(1);
 const cupTeamName = t => state.cup.teams[t] ? state.cup.teams[t].name : ('Team ' + t);
 
@@ -688,7 +761,7 @@ function cupThirtyToggle(dayId, hole, pid) {
   if (!state.cup.thirty[dayId][hole]) state.cup.thirty[dayId][hole] = {};
   const slot = state.cup.thirty[dayId][hole];
   if (slot[pid]) delete slot[pid]; else slot[pid] = true;
-  saveState(); syncKey('cup');
+  saveState(); cupSyncLeaf('thirty', [dayId, hole, pid], slot[pid] ? true : null);
   renderCupLivePanel(); renderCupRounds();
 }
 function cupThirtyTeamStats(dayId, team) {
@@ -866,7 +939,7 @@ function cupApplySuggestion(roundId, itemId, s) {
   const it = r.items.find(x => x.id === itemId); if (!it) return;
   it.state = s;
   renderCupBoard(); renderCupRounds();
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
 }
 // A finished or in-progress singles match, rendered the same way
 // wherever one appears.
@@ -909,7 +982,7 @@ function cupMatchPlayPairs(dayId) {
 // is all that's needed — the four matches follow from it.
 function cupSetLone(team, pid) {
   state.cup.lone[team] = pid || null;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupRounds();
 }
 function cupTwoVOneMatches(dayId) {
@@ -929,7 +1002,7 @@ function cupTwoVOneMatches(dayId) {
 // against team B's in order.
 function cupSetPro(pid, name) {
   state.cup.pros[pid] = name.trim();
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupRounds();
 }
 function cupProToPar(dayId, pid, hole) {
@@ -941,13 +1014,18 @@ function cupAdjustProToPar(dayId, pid, hole, delta) {
   if (!state.cup.proScores[dayId]) state.cup.proScores[dayId] = {};
   if (!state.cup.proScores[dayId][pid]) state.cup.proScores[dayId][pid] = {};
   const cur = cupProToPar(dayId, pid, hole);
-  state.cup.proScores[dayId][pid][hole] = (cur == null ? 0 : cur) + delta;
-  saveState(); syncKey('cup');
+  const v = (cur == null ? 0 : cur) + delta;
+  state.cup.proScores[dayId][pid][hole] = v;
+  saveState(); cupSyncLeaf('proScores', [dayId, pid, hole], v);
   renderCupLivePanel(); renderCupRounds();
 }
 function cupClearProToPar(dayId, pid, hole) {
   const d = state.cup.proScores[dayId];
-  if (d && d[pid]) { delete d[pid][hole]; saveState(); syncKey('cup'); renderCupLivePanel(); renderCupRounds(); }
+  if (d && d[pid]) {
+    delete d[pid][hole];
+    saveState(); cupSyncLeaf('proScores', [dayId, pid, hole], null);
+    renderCupLivePanel(); renderCupRounds();
+  }
 }
 // Combined score to par for one side on one hole: pro's to par plus the
 // amateur's net relative to the par he's playing off.
@@ -987,7 +1065,7 @@ function cupSetKp(dayId, hole, pid) {
   if (!state.cup.kp[dayId]) state.cup.kp[dayId] = {};
   if (state.cup.kp[dayId][hole] === pid) delete state.cup.kp[dayId][hole];
   else state.cup.kp[dayId][hole] = pid;
-  saveState(); syncKey('cup');
+  saveState(); cupSyncLeaf('kp', [dayId, hole], state.cup.kp[dayId][hole] || null);
   renderCupLivePanel(); renderCupRounds();
 }
 function cupParThreeHoles(dayId) {
@@ -1248,18 +1326,18 @@ function cupSetHandicapIndex(pid, val) {
   const parsed = cupParseHcp(val);
   if (Number.isNaN(parsed)) { renderCupHcpPanel(); return; } // unreadable — put the old value back
   state.cup.golferProfiles[pid].handicapIndex = parsed;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
 }
 function cupSetRatingSet(pid, val) {
   state.cup.golferProfiles[pid].ratingSet = val;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
 }
 function cupSetTeeSelection(dayId, pid, teeId) {
   if (!state.cup.teeSelections[dayId]) state.cup.teeSelections[dayId] = {};
   state.cup.teeSelections[dayId][pid] = teeId;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
 }
 
@@ -1305,7 +1383,7 @@ function cupSwapGroup(dayId, pid) {
   if (idx0 !== -1) { groups[0].splice(idx0, 1); groups[1].push(pid); }
   else { const idx1 = groups[1].indexOf(pid); if (idx1 !== -1) { groups[1].splice(idx1, 1); groups[0].push(pid); } }
   state.cup.groups[dayId] = groups;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupLivePanel();
 }
 function cupSetLiveRound(dayId) { cupLiveView.dayId = dayId; cupLiveView.groupIdx = 0; cupLiveView.hole = 1; cupRememberView(); renderCupLivePanel(); }
@@ -1322,8 +1400,9 @@ function cupParFor(dayId, pid, hole) {
 function cupWriteGross(dayId, pid, hole, value) {
   if (!state.cup.holeScores[dayId]) state.cup.holeScores[dayId] = {};
   if (!state.cup.holeScores[dayId][pid]) state.cup.holeScores[dayId][pid] = {};
-  state.cup.holeScores[dayId][pid][hole] = Math.max(1, value);
-  saveState(); syncKey('cup');
+  const v = Math.max(1, value);
+  state.cup.holeScores[dayId][pid][hole] = v;
+  saveState(); cupSyncLeaf('holeScores', [dayId, pid, hole], v);
   renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
 }
 function cupAdjustGross(dayId, pid, hole, delta) {
@@ -1342,7 +1421,7 @@ function cupConfirmPar(dayId, pid, hole) {
 function cupClearGross(dayId, pid, hole) {
   if (state.cup.holeScores[dayId] && state.cup.holeScores[dayId][pid]) {
     delete state.cup.holeScores[dayId][pid][hole];
-    saveState(); syncKey('cup');
+    saveState(); cupSyncLeaf('holeScores', [dayId, pid, hole], null);
     renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
   }
 }
@@ -1587,7 +1666,7 @@ function renderCupSetup() {
 function cupSetPlayerTeam(pid, team) {
   const p = state.cup.players.find(x => x.id === pid); if (!p) return;
   p.team = team;
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
   renderCupBoard(); renderCupRounds(); renderCupStandings(); renderCupSFTable();
 }
 
@@ -1616,7 +1695,7 @@ document.getElementById('cup-rounds').addEventListener('click', e => {
   const it = r.items.find(x => x.id === b.dataset.item); if (!it) return;
   it.state = (it.state === b.dataset.s) ? null : b.dataset.s;
   renderCupBoard(); renderCupRounds();
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
 });
 
 document.getElementById('cup-sfTable').addEventListener('input', e => {
@@ -1636,17 +1715,20 @@ document.getElementById('cup-sfTable').addEventListener('input', e => {
     });
     const totCell = tr.querySelector('td.tot'); if (totCell) totCell.textContent = cupFmt(total);
   });
-  saveState(); syncKey('cup');
+  saveState(); cupSync();
 });
 
-document.getElementById('cup-teamAName').addEventListener('input', e => { state.cup.teams.A = { name: e.target.value || 'Team A' }; renderCupBoard(); saveState(); syncKey('cup'); });
-document.getElementById('cup-teamBName').addEventListener('input', e => { state.cup.teams.B = { name: e.target.value || 'Team B' }; renderCupBoard(); saveState(); syncKey('cup'); });
+document.getElementById('cup-teamAName').addEventListener('input', e => { state.cup.teams.A = { name: e.target.value || 'Team A' }; renderCupBoard(); saveState(); cupSync(); });
+document.getElementById('cup-teamBName').addEventListener('input', e => { state.cup.teams.B = { name: e.target.value || 'Team B' }; renderCupBoard(); saveState(); cupSync(); });
 
 document.getElementById('cup-resetBtn').addEventListener('click', () => {
   if (confirm('Reset all Cup results, Championship scores, handicaps, tee choices and hole scores? This clears them for everyone, not just you.')) {
     state.cup = cupDefaults();
     renderCupAll();
-    saveState(); syncKey('cup');
+    saveState(); cupSync();
+    // The per-hole data lives in its own shared subtree now, so clearing
+    // the blob alone would leave it there to be pushed straight back.
+    CUP_LIVE_FIELDS.forEach(f => cupSyncLeaf(f, [], null));
   }
 });
 
