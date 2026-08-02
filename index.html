@@ -1451,7 +1451,7 @@ async function syncKey(key, valueOverride) {
   const v = valueOverride !== undefined ? valueOverride : state[key];
   try {
     await db.ref('ireland2026/' + key).set({ v, by: state.currentUser || '', at });
-  } catch(e) { console.warn('syncKey failed:', e); }
+  } catch(e) { reportSyncFailure('write ' + key, e); }
 }
 
 // ---- per-leaf sync -------------------------------------------------
@@ -1460,12 +1460,30 @@ async function syncKey(key, valueOverride) {
 // a copy containing only their own work and overwrite the other's.
 // These write one value at its own path instead, so the server merges
 // them and concurrent edits to different holes never collide.
-const LIVE_ROOT = 'ireland2026live';
+// Deliberately a child of the same node everything else syncs under.
+// A sibling top-level path is a different thing as far as the database's
+// access rules are concerned, and writes to it are rejected outright.
+const LIVE_ROOT = 'ireland2026/live';
+
+// Sync failures used to go to the console, where nobody was looking, so
+// a rejected write was indistinguishable from a working one. Say it out
+// loud instead — the whole point is knowing whether the scores are
+// reaching anyone.
+let syncFailureAnnounced = false;
+function reportSyncFailure(where, err) {
+  console.warn('sync failed:', where, err);
+  setSyncStatus('offline');
+  if (syncFailureAnnounced) return;
+  syncFailureAnnounced = true;
+  const why = (err && (err.code || err.message)) ? ' (' + (err.code || err.message) + ')' : '';
+  showToast('⚠️ Scores are saving here but not reaching other phones' + why);
+}
 
 function syncLeaf(path, value) {
   if (!db) return;
   db.ref(LIVE_ROOT + '/' + path).set(value === undefined ? null : value)
-    .catch(e => console.warn('syncLeaf failed:', path, e));
+    .then(() => { syncFailureAnnounced = false; setSyncStatus('connected'); })
+    .catch(e => reportSyncFailure('write ' + path, e));
   db.ref(LIVE_ROOT + '/meta').set({ by: state.currentUser || '', at: new Date().toISOString() })
     .catch(() => {});
 }
@@ -1481,7 +1499,7 @@ function subscribeLive() {
     const activePane = document.querySelector('.tab-pane.active');
     if (activePane?.id === 'tab-cup' && typeof renderCupAll === 'function') renderCupAll();
     if (data.meta && data.meta.by && data.meta.by !== state.currentUser) showSyncToast(data.meta.by);
-  });
+  }, err => reportSyncFailure('subscribe', err));
 }
 
 function subscribeRealtime() {
