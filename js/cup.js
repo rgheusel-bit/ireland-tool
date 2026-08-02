@@ -437,7 +437,26 @@ function cupHydrate(saved) {
 // This split matters: two group scorers each pushing a whole cup object
 // would each be pushing a copy that only contains their own group's
 // work, and would take turns wiping the other's scores.
-const CUP_LIVE_FIELDS = ['holeScores', 'thirty', 'kp', 'proScores'];
+// Per-hole data merges all the way down to individual values: two phones
+// writing different holes never meet.
+const CUP_LIVE_DEEP = ['holeScores', 'thirty', 'kp', 'proScores'];
+// A day's groups are one arrangement and can't be half one person's and
+// half another's, so they sync a whole day at a time — different days
+// still never collide, which is what matters.
+const CUP_LIVE_BY_DAY = ['groups'];
+const CUP_LIVE_FIELDS = CUP_LIVE_DEEP.concat(CUP_LIVE_BY_DAY);
+
+// Firebase stores a two-element array as an array, but can hand it back
+// either way. Put a day's groups back into the shape the app expects:
+// exactly two lists of player ids.
+function cupNormalizeGroups(v) {
+  if (!v) return null;
+  const outer = Array.isArray(v) ? v : Object.keys(v).sort((a, b) => a - b).map(k => v[k]);
+  const two = outer.slice(0, 2).map(g =>
+    (Array.isArray(g) ? g : (g && typeof g === 'object' ? Object.keys(g).sort((a, b) => a - b).map(k => g[k]) : []))
+      .filter(x => typeof x === 'string' && x));
+  return two.length === 2 ? two : null;
+}
 
 function cupBlob() {
   const out = {};
@@ -487,9 +506,22 @@ function cupApplyLive(data) {
   if (!state.cup) return false;
   let changed = false;
   const pushes = [];
-  CUP_LIVE_FIELDS.forEach(f => {
+  CUP_LIVE_DEEP.forEach(f => {
     const local = state.cup[f] || {};
     const merged = cupMergeLiveNode(local, cupPlainObject(data[f]) || {}, [f], pushes);
+    if (JSON.stringify(merged) === JSON.stringify(local)) return;
+    state.cup[f] = merged;
+    changed = true;
+  });
+  CUP_LIVE_BY_DAY.forEach(f => {
+    const local = state.cup[f] || {};
+    const incoming = data[f] || {};
+    const merged = {};
+    new Set(Object.keys(local).concat(Object.keys(incoming))).forEach(day => {
+      const fromServer = cupNormalizeGroups(incoming[day]);
+      if (fromServer) { merged[day] = fromServer; return; }
+      if (local[day]) { merged[day] = local[day]; pushes.push({ path: [f, day], value: local[day] }); }
+    });
     if (JSON.stringify(merged) === JSON.stringify(local)) return;
     state.cup[f] = merged;
     changed = true;
@@ -1383,8 +1415,8 @@ function cupSwapGroup(dayId, pid) {
   if (idx0 !== -1) { groups[0].splice(idx0, 1); groups[1].push(pid); }
   else { const idx1 = groups[1].indexOf(pid); if (idx1 !== -1) { groups[1].splice(idx1, 1); groups[0].push(pid); } }
   state.cup.groups[dayId] = groups;
-  saveState(); cupSync();
-  renderCupLivePanel();
+  saveState(); cupSyncLeaf('groups', [dayId], groups);
+  renderCupLivePanel(); renderCupRounds();
 }
 function cupSetLiveRound(dayId) { cupLiveView.dayId = dayId; cupLiveView.groupIdx = 0; cupLiveView.hole = 1; cupRememberView(); renderCupLivePanel(); }
 function cupSetLiveGroup(idx) { cupLiveView.groupIdx = idx; cupRememberView(); renderCupLivePanel(); }
