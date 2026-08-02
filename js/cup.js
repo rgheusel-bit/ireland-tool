@@ -126,8 +126,8 @@ const CUP_PORTMARNOCK_HOLES = [
   { num: 12, parMen: 3, siMen: 16, parWomen: 3, siWomen: 16 },
   { num: 13, parMen: 5, siMen: 14, parWomen: 5, siWomen: 14 },
   { num: 14, parMen: 4, siMen: 2, parWomen: 4, siWomen: 2 },
-  { num: 15, parMen: 3, siMen: 18, parWomen: 3, siWomen: 18 },
-  { num: 16, parMen: 5, siMen: 8, parWomen: 5, siWomen: 8 },
+  { num: 15, parMen: 3, siMen: 8, parWomen: 3, siWomen: 8 },
+  { num: 16, parMen: 5, siMen: 18, parWomen: 5, siWomen: 18 },
   { num: 17, parMen: 4, siMen: 4, parWomen: 4, siWomen: 4 },
   { num: 18, parMen: 4, siMen: 10, parWomen: 4, siWomen: 10 },
 ];
