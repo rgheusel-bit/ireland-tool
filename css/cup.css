@@ -216,6 +216,23 @@
 #cup-tracker .pro-name{font-size:12.5px; font-weight:700; color:var(--ink);}
 #cup-tracker .pro-name small{display:block; font-weight:500; font-size:10.5px; color:var(--ink-faint); margin-top:1px;}
 
+/* ---------- 30 Scores running tally ---------- */
+#cup-tracker .tally{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:11px 14px 9px; margin-bottom:16px;}
+#cup-tracker .tally-head{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px; color:var(--ink-faint); margin-bottom:9px;}
+#cup-tracker .tally-row{display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px; padding:6px 0;}
+#cup-tracker .tally-row + .tally-row{border-top:1px solid var(--hair);}
+#cup-tracker .tally-team{display:flex; align-items:center; gap:8px; font-family:var(--display); font-weight:700; font-size:13.5px; color:var(--ink); min-width:0;}
+#cup-tracker .tally-team .dot{width:10px; height:10px;}
+#cup-tracker .tally-par{font-family:var(--display); font-weight:700; font-size:1.45rem; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink-faint); min-width:2.2em; text-align:right;}
+#cup-tracker .tally-par.under{color:var(--green);}
+#cup-tracker .tally-par.over{color:var(--rust);}
+#cup-tracker .tally-par.level{color:var(--ink);}
+#cup-tracker .tally-count{text-align:right; min-width:5.4em;}
+#cup-tracker .tally-count b{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); font-variant-numeric:tabular-nums;}
+#cup-tracker .tally-count b.done{color:var(--green);}
+#cup-tracker .tally-count b.over{color:var(--rust);}
+#cup-tracker .tally-count small{display:block; font-size:10px; color:var(--ink-faint); margin-top:1px;}
+
 /* ---------- 30 Scores ---------- */
 #cup-tracker .t30-panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:12px 14px; margin-bottom:16px;}
 #cup-tracker .t30-head{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.9px; color:var(--ink-faint); margin-bottom:10px;}

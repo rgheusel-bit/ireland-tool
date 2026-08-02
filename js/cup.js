@@ -693,7 +693,7 @@ function cupThirtyToggle(dayId, hole, pid) {
 }
 function cupThirtyTeamStats(dayId, team) {
   const roster = cupTeamRosterForDay(team, dayId);
-  let counted = 0, total = 0, missingScore = 0;
+  let counted = 0, total = 0, toPar = 0, missingScore = 0;
   const perHole = {};
   for (let h = 1; h <= 18; h++) {
     roster.forEach(pid => {
@@ -701,7 +701,8 @@ function cupThirtyTeamStats(dayId, team) {
       counted++;
       perHole[h] = (perHole[h] || 0) + 1;
       const net = cupNetForHole(pid, dayId, h);
-      if (net == null) missingScore++; else total += net;
+      if (net == null) missingScore++;
+      else { total += net; toPar += net - cupParFor(dayId, pid, h); }
     });
   }
   // Holes that have been played but had nothing counted — usually an
@@ -713,7 +714,7 @@ function cupThirtyTeamStats(dayId, team) {
   }
   const holesLeft = 18 - Object.keys(perHole).length;
   return {
-    counted, total, missingScore, skipped, perHole,
+    counted, total, toPar, missingScore, skipped, perHole,
     over: counted > CUP_THIRTY_TARGET,
     // With three players a hole, anything more than 3x the untouched
     // holes short of 30 can no longer get there.
@@ -1395,6 +1396,40 @@ function cupThirtyPickerHtml(dayId, hole) {
   </div>`;
 }
 
+// Golf notation for a score relative to par: level is E, under carries a
+// true minus sign rather than a hyphen.
+function cupFmtToPar(n) {
+  if (n == null) return '—';
+  if (n === 0) return 'E';
+  return n > 0 ? '+' + n : '−' + Math.abs(n);
+}
+
+// Running 30 Scores tally, pinned to the top of Live Scoring on the round
+// it's played: where each team stands to par on the scores it has taken,
+// and how many of its 30 are gone.
+function cupThirtyTallyHtml(dayId) {
+  if (dayId !== CUP_GAME_DAY.r30) return '';
+  const row = team => {
+    const s = cupThirtyTeamStats(dayId, team);
+    const parCls = s.counted === 0 ? '' : (s.toPar < 0 ? 'under' : s.toPar > 0 ? 'over' : 'level');
+    const left = CUP_THIRTY_TARGET - s.counted;
+    const countCls = s.over || s.unreachable ? 'over' : (s.counted === CUP_THIRTY_TARGET ? 'done' : '');
+    const note = s.over ? `${s.counted - CUP_THIRTY_TARGET} too many`
+      : s.unreachable ? 'can\'t reach 30'
+      : s.counted === CUP_THIRTY_TARGET ? 'all 30 taken'
+      : `${left} to take`;
+    return `<div class="tally-row">
+      <span class="tally-team"><span class="dot ${team === 'A' ? 'a' : 'b'}"></span>${esc(cupTeamName(team))}</span>
+      <span class="tally-par ${parCls}">${s.counted ? cupFmtToPar(s.toPar) : '—'}</span>
+      <span class="tally-count"><b class="${countCls}">${s.counted}/30</b><small>${note}</small></span>
+    </div>`;
+  };
+  return `<div class="tally">
+    <div class="tally-head">30 Scores — running tally</div>
+    ${row('A')}${row('B')}
+  </div>`;
+}
+
 // Grivey's closest-to-pin, on the par 3s of the round it's played on.
 function cupKpPickerHtml(dayId, hole) {
   if (dayId !== CUP_GAME_DAY.grivey) return '';
@@ -1505,6 +1540,7 @@ function renderCupLivePanel() {
 
   mount.innerHTML = `
     <div class="live-round-picker">${roundPicker}</div>
+    ${cupThirtyTallyHtml(dayId)}
     <div class="live-group-picker">${groupPicker}</div>
     <div class="hole-nav">
       <button class="hole-nav-btn" onclick="cupSetLiveHole(${hole - 1})" ${hole <= 1 ? 'disabled' : ''} aria-label="Previous hole">‹</button>
