@@ -464,10 +464,45 @@ function cupBlob() {
   return out;
 }
 function cupSync() { syncKey('cup', cupBlob()); }
-function cupSyncLeaf(field, parts, value) {
-  if (typeof syncLeaf !== 'function') return;
-  syncLeaf(parts.length ? field + '/' + parts.join('/') : field, value);
+
+// A change doesn't reach the server the instant it's made, and the server
+// can answer with a snapshot taken just before it landed. So every leaf
+// this phone sends is remembered until the server hands the same value
+// back.
+//
+// Without this, clearing something is indistinguishable from "the server
+// hasn't got it yet": the merge below keeps anything the server is
+// missing, so a just-removed 30 Scores pick came straight back — and got
+// pushed up again, making it stick. Setting a value was safe because the
+// server's own copy was at worst one round trip behind; only removals
+// needed a way to say "gone on purpose".
+//
+// Entries expire, so a change made with no signal doesn't hold off
+// somebody else's later edit forever.
+const CUP_PENDING_TTL_MS = 60000;
+function cupPending() {
+  if (!state.cupPending || typeof state.cupPending !== 'object' || Array.isArray(state.cupPending)) state.cupPending = {};
+  const now = Date.now();
+  Object.keys(state.cupPending).forEach(k => {
+    const e = state.cupPending[k];
+    if (!e || typeof e !== 'object' || !(now - e.at < CUP_PENDING_TTL_MS)) delete state.cupPending[k];
+  });
+  return state.cupPending;
 }
+const cupLeafPath = (field, parts) => parts.length ? field + '/' + parts.join('/') : field;
+function cupSyncLeaf(field, parts, value) {
+  const path = cupLeafPath(field, parts);
+  const v = value === undefined ? null : value;
+  cupPending()[path] = { v: v, at: Date.now() };
+  if (typeof syncLeaf !== 'function') return;
+  syncLeaf(path, v);
+}
+function cupResendPending() {
+  if (typeof syncLeaf !== 'function') return;
+  const pending = cupPending();
+  Object.keys(pending).forEach(path => syncLeaf(path, pending[path].v));
+}
+const cupSame = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
 // Firebase hands back an array whenever a node's keys look like indexes,
 // which hole numbers do. Put those back to plain objects so lookups by
 // hole keep working and empty slots don't appear as nulls.
@@ -491,14 +526,36 @@ function cupMergeRemote(remote) {
 // would otherwise be erased the moment it connected.
 function cupMergeLiveNode(local, incoming, path, pushes) {
   const out = {};
+  const pending = cupPending();
+  const here = path.join('/');
   const keys = new Set(Object.keys(local || {}).concat(Object.keys(incoming || {})));
+  // A leaf this phone has just cleared is in neither list, so pull the
+  // names of anything still in flight below this node into the walk —
+  // otherwise a removal would never be confirmed or re-sent.
+  Object.keys(pending).forEach(p => {
+    const parts = p.split('/');
+    if (parts.length === path.length + 1 && parts.slice(0, path.length).join('/') === here) keys.add(parts[path.length]);
+  });
   keys.forEach(k => {
     const l = local ? local[k] : undefined;
     const i = incoming ? incoming[k] : undefined;
     const lObj = l && typeof l === 'object', iObj = i && typeof i === 'object';
+    const sent = pending[here ? here + '/' + k : k];
+    if (sent && !lObj && !iObj) {
+      // Still waiting on this one. The server's answer only counts once
+      // it's the answer we're waiting for; until then the change stands.
+      // Nothing is re-sent here — the original write is already on its
+      // way, and answering every snapshot with another copy of it would
+      // pile up writes faster than they could land.
+      if (cupSame(i, sent.v)) {
+        delete pending[here ? here + '/' + k : k];
+        if (i !== undefined) out[k] = i;
+      } else if (sent.v !== null) out[k] = sent.v;
+      return;
+    }
     if (lObj || iObj) out[k] = cupMergeLiveNode(lObj ? l : {}, iObj ? i : {}, path.concat(k), pushes);
     else if (i !== undefined) out[k] = i;
-    else { out[k] = l; pushes.push({ path: path.concat(k), value: l }); }
+    else if (l !== undefined) { out[k] = l; pushes.push({ path: path.concat(k), value: l }); }
   });
   return out;
 }
@@ -506,19 +563,35 @@ function cupApplyLive(data) {
   if (!state.cup) return false;
   let changed = false;
   const pushes = [];
+  const pending = cupPending();
+  // A reset clears a whole field at once. Same rule as a single leaf: it
+  // doesn't take until the server comes back empty.
+  const wipedField = f => {
+    const sent = pending[f];
+    if (!sent) return false;
+    const incoming = cupPlainObject(data[f]);
+    if (!incoming || !Object.keys(incoming).length) { delete pending[f]; return false; }
+    return true;
+  };
   CUP_LIVE_DEEP.forEach(f => {
     const local = state.cup[f] || {};
-    const merged = cupMergeLiveNode(local, cupPlainObject(data[f]) || {}, [f], pushes);
+    const merged = wipedField(f) ? {} : cupMergeLiveNode(local, cupPlainObject(data[f]) || {}, [f], pushes);
     if (JSON.stringify(merged) === JSON.stringify(local)) return;
     state.cup[f] = merged;
     changed = true;
   });
   CUP_LIVE_BY_DAY.forEach(f => {
     const local = state.cup[f] || {};
-    const incoming = data[f] || {};
+    const incoming = wipedField(f) ? {} : (data[f] || {});
     const merged = {};
     new Set(Object.keys(local).concat(Object.keys(incoming))).forEach(day => {
+      const sent = pending[f + '/' + day];
       const fromServer = cupNormalizeGroups(incoming[day]);
+      if (sent) {
+        if (cupSame(fromServer, sent.v)) { delete pending[f + '/' + day]; if (fromServer) merged[day] = fromServer; }
+        else if (sent.v) merged[day] = sent.v;
+        return;
+      }
       if (fromServer) { merged[day] = fromServer; return; }
       if (local[day]) { merged[day] = local[day]; pushes.push({ path: [f, day], value: local[day] }); }
     });
@@ -1760,6 +1833,7 @@ document.getElementById('cup-resetBtn').addEventListener('click', () => {
     saveState(); cupSync();
     // The per-hole data lives in its own shared subtree now, so clearing
     // the blob alone would leave it there to be pushed straight back.
+    state.cupPending = {};
     CUP_LIVE_FIELDS.forEach(f => cupSyncLeaf(f, [], null));
   }
 });

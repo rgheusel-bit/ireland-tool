@@ -1245,6 +1245,10 @@ let state = {
   // a refresh mid-round comes back where you were instead of hole 1, and
   // without dragging anyone else's screen along.
   cupView: null,
+  // Score changes sent to the shared copy but not yet echoed back. Local
+  // only, and kept on disk so a refresh a second after a change doesn't
+  // undo it. See cupSyncLeaf.
+  cupPending: {},
 };
 
 // ============================================================
@@ -1481,15 +1485,24 @@ function reportSyncFailure(where, err) {
 
 function syncLeaf(path, value) {
   if (!db) return;
+  // The "who touched it last" stamp is written after the value, not
+  // alongside it. Fired together they race, and the stamp landing first
+  // wakes every listener with a snapshot that still shows the old value.
   db.ref(LIVE_ROOT + '/' + path).set(value === undefined ? null : value)
-    .then(() => { syncFailureAnnounced = false; setSyncStatus('connected'); })
+    .then(() => {
+      syncFailureAnnounced = false;
+      setSyncStatus('connected');
+      return db.ref(LIVE_ROOT + '/meta').set({ by: state.currentUser || '', at: new Date().toISOString() });
+    })
     .catch(e => reportSyncFailure('write ' + path, e));
-  db.ref(LIVE_ROOT + '/meta').set({ by: state.currentUser || '', at: new Date().toISOString() })
-    .catch(() => {});
 }
 
 function subscribeLive() {
   if (!db) return;
+  // A change made a moment before the page was closed or reloaded never
+  // finished sending. Send it again on the way back in, so the shared
+  // copy catches up instead of quietly winning.
+  if (typeof cupResendPending === 'function') cupResendPending();
   db.ref(LIVE_ROOT).on('value', snapshot => {
     const data = snapshot.val() || {};
     if (typeof cupApplyLive !== 'function') return;
