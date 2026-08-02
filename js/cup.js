@@ -1541,14 +1541,16 @@ function renderCupLivePanel() {
   mount.innerHTML = `
     <div class="live-round-picker">${roundPicker}</div>
     ${cupThirtyTallyHtml(dayId)}
-    <div class="live-group-picker">${groupPicker}</div>
-    <div class="hole-nav">
-      <button class="hole-nav-btn" onclick="cupSetLiveHole(${hole - 1})" ${hole <= 1 ? 'disabled' : ''} aria-label="Previous hole">‹</button>
-      <div class="hole-nav-mid">
-        <div class="hole-nav-num">Hole ${hole}</div>
-        <div class="hole-nav-meta">Par ${holeData.parMen}${holeData.parWomen !== holeData.parMen ? ' / ' + holeData.parWomen + ' (w)' : ''} · SI ${holeData.siMen}${holeData.siWomen !== holeData.siMen ? ' / ' + holeData.siWomen + ' (w)' : ''}</div>
+    <div class="live-sticky">
+      <div class="live-group-picker">${groupPicker}</div>
+      <div class="hole-nav">
+        <button class="hole-nav-btn" onclick="cupSetLiveHole(${hole - 1})" ${hole <= 1 ? 'disabled' : ''} aria-label="Previous hole">‹</button>
+        <div class="hole-nav-mid">
+          <div class="hole-nav-num">Hole ${hole}</div>
+          <div class="hole-nav-meta">Par ${holeData.parMen}${holeData.parWomen !== holeData.parMen ? ' / ' + holeData.parWomen + ' (w)' : ''} · SI ${holeData.siMen}${holeData.siWomen !== holeData.siMen ? ' / ' + holeData.siWomen + ' (w)' : ''}</div>
+        </div>
+        <button class="hole-nav-btn" onclick="cupSetLiveHole(${hole + 1})" ${hole >= 18 ? 'disabled' : ''} aria-label="Next hole">›</button>
       </div>
-      <button class="hole-nav-btn" onclick="cupSetLiveHole(${hole + 1})" ${hole >= 18 ? 'disabled' : ''} aria-label="Next hole">›</button>
     </div>
     <div class="hole-nav-jump">${jumpStrip}</div>
     <div class="live-score-rows">${scoreRows}</div>

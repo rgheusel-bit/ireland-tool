@@ -166,11 +166,15 @@
 #cup-tracker .live-round-picker{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;}
 #cup-tracker .live-round-btn{appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:999px; padding:7px 14px; font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer;}
 #cup-tracker .live-round-btn.active{background:var(--green); border-color:var(--green); color:#fff;}
-#cup-tracker .live-group-picker{display:flex; gap:8px; margin-bottom:16px;}
-#cup-tracker .live-group-btn{flex:1; appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:var(--radius-sm); padding:10px; font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; text-align:left;}
+/* The group and hole controls stay pinned under the main tab bar. The
+   panel is long enough that they used to scroll up underneath it, and
+   the tab bar — sticky and opaque at z-index 90 — would eat the tap. */
+#cup-tracker .live-sticky{position:sticky; top:44px; z-index:40; background:var(--paper); padding:8px 0 2px; margin-bottom:12px;}
+#cup-tracker .live-group-picker{display:flex; gap:8px; margin-bottom:8px;}
+#cup-tracker .live-group-btn{flex:1; appearance:none; border:1.5px solid var(--line); background:var(--surface); border-radius:var(--radius-sm); padding:7px 9px; font:inherit; font-size:12px; font-weight:700; color:var(--ink-soft); cursor:pointer; text-align:left; min-width:0;}
 #cup-tracker .live-group-btn.active{border-color:var(--green); background:var(--green-wash); color:var(--ink);}
-#cup-tracker .live-group-btn small{display:block; font-weight:500; color:var(--ink-faint); margin-top:2px;}
-#cup-tracker .hole-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:14px 16px; margin-bottom:16px;}
+#cup-tracker .live-group-btn small{display:block; font-weight:500; font-size:10.5px; color:var(--ink-faint); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#cup-tracker .hole-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:10px 14px;}
 #cup-tracker .hole-nav-btn{appearance:none; border:1px solid var(--line); background:#fff; border-radius:var(--radius-sm); width:38px; height:38px; font-size:18px; cursor:pointer; color:var(--ink-soft); flex-shrink:0;}
 #cup-tracker .hole-nav-btn:hover{border-color:var(--green-3); color:var(--green);}
 #cup-tracker .hole-nav-mid{text-align:center; flex:1;}
@@ -269,7 +273,6 @@
   #cup-tracker .item{align-items:flex-start;}
   #cup-tracker .team-names{grid-template-columns:1fr;}
   #cup-tracker .pset{grid-template-columns:1fr 84px;}
-  #cup-tracker .live-group-picker{flex-direction:column;}
 }
 @media (prefers-reduced-motion:reduce){
   #cup-tracker *{animation:none !important; transition:none !important;}
