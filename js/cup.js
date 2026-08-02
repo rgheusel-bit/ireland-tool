@@ -485,17 +485,45 @@ function cupPending() {
   const now = Date.now();
   Object.keys(state.cupPending).forEach(k => {
     const e = state.cupPending[k];
-    if (!e || typeof e !== 'object' || !(now - e.at < CUP_PENDING_TTL_MS)) delete state.cupPending[k];
+    if (!e || typeof e !== 'object') { delete state.cupPending[k]; return; }
+    // A change that was refused outright never reached anyone, so it
+    // keeps waiting to be sent however long that takes. Only a change
+    // that did go out gives up, and only so it can't sit on top of
+    // somebody else's later edit forever.
+    if (!e.retry && !(now - e.at < CUP_PENDING_TTL_MS)) delete state.cupPending[k];
   });
   return state.cupPending;
 }
+// A refused write isn't in flight, and must stop standing in for one —
+// otherwise this phone waits for an echo that can't come instead of
+// offering the change up again when the signal returns.
+function cupPendingFailed(path) {
+  const e = cupPending()[path];
+  if (e) e.retry = true;
+}
+// Rubbing something out has to be a fact the shared copy can state. If a
+// cleared score were simply absent, no phone could tell "nobody has
+// entered this yet" from "someone took it off" — and because a phone
+// always offers up whatever the shared copy is missing, every clear was
+// handed straight back by the next phone to hear about it, half a second
+// after the tap. So a clear writes a marker rather than a hole, and
+// absence goes back to meaning only one thing: not sent yet, send it.
+const CUP_CLEARED = '—cleared—';
 const cupLeafPath = (field, parts) => parts.length ? field + '/' + parts.join('/') : field;
 function cupSyncLeaf(field, parts, value) {
   const path = cupLeafPath(field, parts);
-  const v = value === undefined ? null : value;
+  const v = (value === undefined || value === null) ? CUP_CLEARED : value;
   cupPending()[path] = { v: v, at: Date.now() };
   if (typeof syncLeaf !== 'function') return;
   syncLeaf(path, v);
+}
+// Resetting empties a whole field at once, which no per-leaf marker can
+// say. It's stamped instead, and every phone honours a stamp it hasn't
+// seen before — otherwise phones still holding the old round would just
+// feed it back.
+function cupSyncWipe(field) {
+  if (typeof syncLeaf !== 'function') return;
+  syncLeaf(field, { __wipe: new Date().toISOString() });
 }
 function cupResendPending() {
   if (typeof syncLeaf !== 'function') return;
@@ -521,9 +549,10 @@ function cupMergeRemote(remote) {
   state.cup = cupHydrate(Object.assign({}, remote || {}, keep));
 }
 // Merge the shared subtree into this phone rather than replacing with
-// it. What the server has wins, but anything only this phone has is kept
-// and pushed up — a round scored before the app could reach the network
-// would otherwise be erased the moment it connected.
+// it. What the shared copy says wins — including that something was
+// cleared — but anything it has never been told about is kept and sent
+// up. That is what carries a round scored with no signal, and it also
+// quietly repairs any write that went missing along the way.
 function cupMergeLiveNode(local, incoming, path, pushes) {
   const out = {};
   const pending = cupPending();
@@ -542,17 +571,21 @@ function cupMergeLiveNode(local, incoming, path, pushes) {
     const lObj = l && typeof l === 'object', iObj = i && typeof i === 'object';
     const sent = pending[here ? here + '/' + k : k];
     if (sent && !lObj && !iObj) {
-      // Still waiting on this one. The server's answer only counts once
-      // it's the answer we're waiting for; until then the change stands.
-      // Nothing is re-sent here — the original write is already on its
-      // way, and answering every snapshot with another copy of it would
-      // pile up writes faster than they could land.
+      // Still waiting on this one. The shared copy's answer only counts
+      // once it's the answer we're waiting for; until then the change
+      // stands. Nothing is re-sent here — the original write is already
+      // on its way, and answering every snapshot with another copy of it
+      // would pile up writes faster than they could land.
       if (cupSame(i, sent.v)) {
         delete pending[here ? here + '/' + k : k];
-        if (i !== undefined) out[k] = i;
-      } else if (sent.v !== null) out[k] = sent.v;
+        if (i !== undefined && i !== CUP_CLEARED) out[k] = i;
+        return;
+      }
+      if (sent.v !== CUP_CLEARED) out[k] = sent.v;
+      if (sent.retry) { sent.retry = false; pushes.push({ path: path.concat(k), value: sent.v }); }
       return;
     }
+    if (i === CUP_CLEARED) return;          // taken off on purpose — leave it off
     if (lObj || iObj) out[k] = cupMergeLiveNode(lObj ? l : {}, iObj ? i : {}, path.concat(k), pushes);
     else if (i !== undefined) out[k] = i;
     else if (l !== undefined) { out[k] = l; pushes.push({ path: path.concat(k), value: l }); }
@@ -564,43 +597,59 @@ function cupApplyLive(data) {
   let changed = false;
   const pushes = [];
   const pending = cupPending();
-  // A reset clears a whole field at once. Same rule as a single leaf: it
-  // doesn't take until the server comes back empty.
-  const wipedField = f => {
-    const sent = pending[f];
-    if (!sent) return false;
-    const incoming = cupPlainObject(data[f]);
-    if (!incoming || !Object.keys(incoming).length) { delete pending[f]; return false; }
-    return true;
+  // Take a reset stamp we haven't seen before: drop what we're holding
+  // for that field so it isn't offered back up, and remember the stamp so
+  // the same reset isn't honoured twice.
+  if (!state.cupWiped || typeof state.cupWiped !== 'object') state.cupWiped = {};
+  const readField = f => {
+    const incoming = cupPlainObject(data[f]) || {};
+    const stamp = incoming.__wipe;
+    if (typeof stamp === 'string') {
+      delete incoming.__wipe;
+      if (state.cupWiped[f] !== stamp) {
+        state.cupWiped[f] = stamp;
+        state.cup[f] = {};
+        changed = true;
+      }
+    }
+    return incoming;
   };
   CUP_LIVE_DEEP.forEach(f => {
+    const incoming = readField(f);
     const local = state.cup[f] || {};
-    const merged = wipedField(f) ? {} : cupMergeLiveNode(local, cupPlainObject(data[f]) || {}, [f], pushes);
+    const merged = cupMergeLiveNode(local, incoming, [f], pushes);
     if (JSON.stringify(merged) === JSON.stringify(local)) return;
     state.cup[f] = merged;
     changed = true;
   });
   CUP_LIVE_BY_DAY.forEach(f => {
+    const incoming = readField(f);
     const local = state.cup[f] || {};
-    const incoming = wipedField(f) ? {} : (data[f] || {});
     const merged = {};
     new Set(Object.keys(local).concat(Object.keys(incoming))).forEach(day => {
       const sent = pending[f + '/' + day];
-      const fromServer = cupNormalizeGroups(incoming[day]);
+      const fromServer = incoming[day] === CUP_CLEARED ? null : cupNormalizeGroups(incoming[day]);
       if (sent) {
-        if (cupSame(fromServer, sent.v)) { delete pending[f + '/' + day]; if (fromServer) merged[day] = fromServer; }
-        else if (sent.v) merged[day] = sent.v;
+        // Compare the two arrangements, not their shapes — what comes
+        // back has been through Firebase and no longer looks like what
+        // went up, which would leave this waiting on an echo forever.
+        const sentGroups = sent.v === CUP_CLEARED ? null : cupNormalizeGroups(sent.v);
+        const echoed = sent.v === CUP_CLEARED ? incoming[day] === CUP_CLEARED : cupSame(fromServer, sentGroups);
+        if (echoed) { delete pending[f + '/' + day]; if (fromServer) merged[day] = fromServer; return; }
+        if (sentGroups) merged[day] = sentGroups;
+        if (sent.retry) { sent.retry = false; pushes.push({ path: [f, day], value: sent.v }); }
         return;
       }
       if (fromServer) { merged[day] = fromServer; return; }
+      if (incoming[day] === CUP_CLEARED) return;
       if (local[day]) { merged[day] = local[day]; pushes.push({ path: [f, day], value: local[day] }); }
     });
     if (JSON.stringify(merged) === JSON.stringify(local)) return;
     state.cup[f] = merged;
     changed = true;
   });
-  // Send up whatever this phone had that the server didn't. These settle
-  // on the next round trip, when the server already holds them.
+  // Send up whatever this phone had that the shared copy had never been
+  // told about. These settle on the next round trip.
   pushes.forEach(p => cupSyncLeaf(p.path[0], p.path.slice(1), p.value));
   return changed;
 }
@@ -1834,7 +1883,7 @@ document.getElementById('cup-resetBtn').addEventListener('click', () => {
     // The per-hole data lives in its own shared subtree now, so clearing
     // the blob alone would leave it there to be pushed straight back.
     state.cupPending = {};
-    CUP_LIVE_FIELDS.forEach(f => cupSyncLeaf(f, [], null));
+    CUP_LIVE_FIELDS.forEach(cupSyncWipe);
   }
 });
 

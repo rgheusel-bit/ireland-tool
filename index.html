@@ -1249,6 +1249,8 @@ let state = {
   // only, and kept on disk so a refresh a second after a change doesn't
   // undo it. See cupSyncLeaf.
   cupPending: {},
+  // Reset stamps already honoured, so the same reset isn't applied twice.
+  cupWiped: {},
 };
 
 // ============================================================
@@ -1494,7 +1496,10 @@ function syncLeaf(path, value) {
       setSyncStatus('connected');
       return db.ref(LIVE_ROOT + '/meta').set({ by: state.currentUser || '', at: new Date().toISOString() });
     })
-    .catch(e => reportSyncFailure('write ' + path, e));
+    .catch(e => {
+      if (typeof cupPendingFailed === 'function') cupPendingFailed(path);
+      reportSyncFailure('write ' + path, e);
+    });
 }
 
 function subscribeLive() {
