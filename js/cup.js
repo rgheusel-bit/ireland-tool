@@ -45,7 +45,6 @@ const CUP_GAME_DAY = {
   twovone: 'aug7', // Royal Dublin
 };
 const SF_ROUNDS = Object.keys(CUP_ROUND_DAYS);
-const RANK_PTS = [10, 8, 6, 5, 4, 3];
 const CUP_CLINCH = 9.5, CUP_TOTAL = 18;
 
 // ============================================================
@@ -138,7 +137,7 @@ const CUP_PORTMARNOCK_HOLES = [
 // The women's column on that card is the Red tee. A women's-tee golfer
 // defaulting to the shortest tee lands on Green instead, which is par
 // 73 — so exactly one hole plays a shot shorter than the parWomen
-// values below, worth about one Stableford point over a round. Getting
+// values below, worth about one stroke over a round. Getting
 // Green's own per-hole par would close the gap; playing Red instead
 // matches the card exactly.
 const CUP_ROYAL_DUBLIN_HOLES = [
@@ -205,7 +204,7 @@ const CUP_PORTSTEWART_HOLES = [
 // the shorter Bronze tee (that's why White/Green total 72 but Bronze
 // totals 71). Since holes[] only splits Par by rating-set (men/women),
 // not by which specific tee within a gender, hole 11 is recorded as
-// Par 5 (matching White/Green) — a Bronze-tee golfer's Stableford on
+// Par 5 (matching White/Green) — a Bronze-tee golfer's net-to-par on
 // that one hole will be computed a stroke off from their tee's actual
 // par until the model supports per-tee par.
 const CUP_ROYAL_PORTRUSH_HOLES = [
@@ -242,7 +241,7 @@ const CUP_COURSES = {
   // isn't reflected per-hole (CUP_PORTMARNOCK_HOLES currently mirrors
   // men's Par for women on every hole) since the exact hole(s) that
   // reclassify aren't known — Course Handicap is accurate, per-hole
-  // Stableford for a women's-tee golfer is an approximation until that's
+  // net-to-par for a women's-tee golfer is an approximation until that's
   // pinned down.
   aug2: {
     name: 'Portmarnock Golf Club — Red + Blue Nine',
@@ -376,7 +375,9 @@ function cupDefaults() {
         { id: 'm2', name: 'Singles 2 — the four', value: 1, state: null },
         { id: 'm3', name: 'Singles 3 — the pair', value: 1, state: null }] }
     ],
-    stableford: {},
+    // Championship: a round's net score typed in by hand, for a round
+    // that wasn't scored hole by hole. netScores[roundKey][playerId].
+    netScores: {},
     golferProfiles,
     teeSelections: {},
     groups: {},
@@ -396,7 +397,7 @@ function cupHydrate(saved) {
   const out = cupDefaults();
   if (!saved) return out;
   if (saved.teams) out.teams = saved.teams;
-  if (saved.stableford) out.stableford = saved.stableford;
+  if (saved.netScores) out.netScores = saved.netScores;
   if (Array.isArray(saved.players)) {
     saved.players.forEach(sp => { const p = out.players.find(x => x.id === sp.id); if (p && sp.team) p.team = sp.team; });
   }
@@ -780,41 +781,34 @@ function cupStrokesForHole(ch, si) {
   const extra = pos % 18;
   return -(base + (si > (18 - extra) ? 1 : 0));
 }
-function cupStablefordPoints(par, net) {
-  const diff = net - par;
-  if (diff >= 2) return 0;
-  if (diff === 1) return 1;
-  if (diff === 0) return 2;
-  if (diff === -1) return 3;
-  if (diff === -2) return 4;
-  return 5;
-}
 function cupHoleScoresFor(personId, dayId) {
   return (state.cup.holeScores[dayId] && state.cup.holeScores[dayId][personId]) || {};
 }
-// Live net-Stableford total from whatever holes have a gross score entered so far.
-function cupAutoStablefordForPerson(personId, dayId) {
+// A round's card so far, in net strokes: gross added up, the handicap
+// strokes falling on the holes actually played taken off, and the par of
+// those same holes for the to-par figure. Every part is limited to holes
+// with a score entered, so a card in progress reads honestly at the turn
+// rather than looking like a spectacular front nine.
+function cupAutoNetForPerson(personId, dayId) {
   if (!personId) return null;
   const course = CUP_COURSES[dayId]; if (!course) return null;
   const scores = cupHoleScoresFor(personId, dayId);
   const enteredHoles = Object.keys(scores).filter(h => scores[h] != null && scores[h] !== '');
   if (!enteredHoles.length) return null;
   const ch = cupCourseHandicapFor(personId, dayId);
-  const profile = state.cup.golferProfiles[personId] || {};
-  let total = 0;
+  const isWomen = (state.cup.golferProfiles[personId] || {}).ratingSet === 'women';
+  let gross = 0, strokes = 0, par = 0;
   enteredHoles.forEach(hNum => {
     const hole = course.holes.find(h => h.num === Number(hNum)); if (!hole) return;
-    const isWomen = profile.ratingSet === 'women';
-    const si = isWomen ? hole.siWomen : hole.siMen;
-    const par = isWomen ? hole.parWomen : hole.parMen;
-    const strokes = ch == null ? 0 : cupStrokesForHole(ch, si);
-    const net = Number(scores[hNum]) - strokes;
-    total += cupStablefordPoints(par, net);
+    gross += Number(scores[hNum]);
+    par += isWomen ? hole.parWomen : hole.parMen;
+    strokes += ch == null ? 0 : cupStrokesForHole(ch, isWomen ? hole.siWomen : hole.siMen);
   });
-  return { total, thru: enteredHoles.length };
+  const net = gross - strokes;
+  return { gross, strokes, net, par, toPar: net - par, thru: enteredHoles.length, ch };
 }
-function cupAutoStablefordForRound(playerId, dayId) {
-  return cupAutoStablefordForPerson(cupResolvedPerson(playerId, dayId), dayId);
+function cupAutoNetForRound(playerId, dayId) {
+  return cupAutoNetForPerson(cupResolvedPerson(playerId, dayId), dayId);
 }
 
 // ============================================================
@@ -880,16 +874,17 @@ function cupNetBestBallResult(pairA, pairB, dayId) {
   const winner = thru < 18 ? null : (holesA > holesB ? 'A' : holesB > holesA ? 'B' : 'T');
   return { holesA, holesB, thru, winner };
 }
-// Random Draw: rank each team's 3 by that day's net Stableford. High+low
-// form a net best-ball side; the two mids play 1v1. Needs all 6 golfers
-// complete (18 holes) — this game is meant to be scored after the round.
+// Random Draw: rank each team's 3 by that day's net score, best first.
+// High+low form a net best-ball side; the two mids play 1v1. Needs all 6
+// golfers complete (18 holes) — this game is meant to be scored after
+// the round.
 function cupRandomDrawResult(dayId) {
   const rosterA = cupTeamRosterForDay('A', dayId), rosterB = cupTeamRosterForDay('B', dayId);
   if (rosterA.length !== 3 || rosterB.length !== 3) return null;
   const rank = list => {
-    const rows = list.map(pid => ({ pid, sf: cupAutoStablefordForPerson(pid, dayId) }));
-    if (rows.some(r => !r.sf || r.sf.thru !== 18)) return null;
-    return rows.sort((a, b) => b.sf.total - a.sf.total);
+    const rows = list.map(pid => ({ pid, card: cupAutoNetForPerson(pid, dayId) }));
+    if (rows.some(r => !r.card || r.card.thru !== 18)) return null;
+    return rows.sort((a, b) => a.card.net - b.card.net);
   };
   const rA = rank(rosterA), rB = rank(rosterB);
   if (!rA || !rB) return null;
@@ -1016,43 +1011,59 @@ function cupRoundTotals(r) {
 // ============================================================
 // CHAMPIONSHIP MATHS — prefers live hole data, falls back to manual entry
 // ============================================================
-// A round only counts toward ranking once it's either complete (18 holes
-// live) or has a manual total — partial live rounds show in Live Scoring
-// only, so an in-progress round can't distort the Championship standings.
-function cupRoundRankPts(roundKey) {
-  const dayId = CUP_ROUND_DAYS[roundKey];
-  const rows = state.cup.players.map(p => {
-    const personId = cupResolvedPerson(p.id, dayId);
-    const auto = cupAutoStablefordForPerson(personId, dayId);
-    if (auto) return auto.thru === 18 ? { id: p.id, v: auto.total } : null;
-    const manual = state.cup.stableford[roundKey] && state.cup.stableford[roundKey][p.id];
-    if (manual === undefined || manual === null || manual === '') return null;
-    return { id: p.id, v: Number(manual) };
-  }).filter(Boolean);
-  rows.sort((a, b) => b.v - a.v);
-  const out = {};
-  let i = 0;
-  while (i < rows.length) {
-    let j = i; while (j + 1 < rows.length && rows[j + 1].v === rows[i].v) j++;
-    let sum = 0; for (let k = i; k <= j; k++) sum += (RANK_PTS[k] || 0);
-    const avg = sum / (j - i + 1);
-    for (let k = i; k <= j; k++) out[rows[k].id] = avg;
-    i = j + 1;
-  }
-  return out;
+// One player's round, as it counts toward the Championship. A round only
+// counts once it's complete — 18 holes live, or a net score typed in —
+// so a card in progress shows in Live Scoring and the daily summary
+// without moving the standings mid-round.
+// The Championship is played by the six Cup entrants, which includes The
+// Seat — the one place Gary and Elizabeth alternate. Whoever is out that
+// day posts the Seat's round, so it carries a full six-round total like
+// everybody else.
+function cupPlaysDay(personId, dayId) {
+  const day = DAYS.find(d => d.id === dayId);
+  return !!(day && day.golf && day.golf.golfers.includes(personId));
 }
-function cupSfTotals() {
-  const totals = {}; const perRound = {};
-  state.cup.players.forEach(p => { totals[p.id] = 0; perRound[p.id] = {}; });
+function cupRoundNet(playerId, roundKey) {
+  const dayId = CUP_ROUND_DAYS[roundKey];
+  const personId = cupResolvedPerson(playerId, dayId);
+  if (!personId) return null;
+  const card = cupAutoNetForPerson(personId, dayId);
+  if (card) return card.thru === 18 ? { net: card.net, toPar: card.toPar, live: true } : null;
+  const manual = state.cup.netScores[roundKey] && state.cup.netScores[roundKey][playerId];
+  if (manual === undefined || manual === null || manual === '') return null;
+  const net = Number(manual);
+  return { net, toPar: net - cupCoursePar(personId, dayId), live: false };
+}
+// Cumulative net strokes across the six rounds — lowest wins. Rounds
+// played is carried alongside, because a total is only meaningful next
+// to how many rounds went into it.
+function cupNetTotals() {
+  const totals = {}, toPar = {}, counted = {}, perRound = {};
+  state.cup.players.forEach(p => { totals[p.id] = 0; toPar[p.id] = 0; counted[p.id] = 0; perRound[p.id] = {}; });
   SF_ROUNDS.forEach(rk => {
-    const pts = cupRoundRankPts(rk);
     state.cup.players.forEach(p => {
-      const v = pts[p.id];
-      perRound[p.id][rk] = (v === undefined ? null : v);
-      if (v !== undefined) totals[p.id] += v;
+      const r = cupRoundNet(p.id, rk);
+      perRound[p.id][rk] = r;
+      if (!r) return;
+      totals[p.id] += r.net;
+      toPar[p.id] += r.toPar;
+      counted[p.id] += 1;
     });
   });
-  return { totals, perRound };
+  return { totals, toPar, counted, perRound };
+}
+// How many of the six rounds this entrant is down to play — the
+// denominator for "3/6 rounds".
+function cupRoundsScheduled(playerId) {
+  return SF_ROUNDS.filter(rk => cupResolvedPerson(playerId, CUP_ROUND_DAYS[rk])).length;
+}
+// The par a golfer plays to that day — the women's card differs from the
+// men's on several of these courses, so it can't be read off the course
+// alone.
+function cupCoursePar(personId, dayId) {
+  const course = CUP_COURSES[dayId]; if (!course) return 0;
+  const isWomen = (state.cup.golferProfiles[personId] || {}).ratingSet === 'women';
+  return course.holes.reduce((s, h) => s + (isWomen ? h.parWomen : h.parMen), 0);
 }
 
 // ============================================================
@@ -1374,45 +1385,132 @@ function cupPlayerLabel(p) {
   return p.seat ? 'The Seat' : getParticipant(p.personId).name;
 }
 function renderCupStandings() {
-  const { totals, perRound } = cupSfTotals();
-  const ranked = state.cup.players.map(p => ({ p, t: totals[p.id] })).sort((a, b) => b.t - a.t);
-  const top = ranked.length ? ranked[0].t : 0;
-  document.getElementById('cup-standings').innerHTML = `<h3>Championship standings</h3>` + ranked.map((row, i) => {
-    const counted = SF_ROUNDS.filter(rk => perRound[row.p.id][rk] !== null).length;
-    const lead = (row.t === top && top > 0);
+  const { totals, toPar, counted } = cupNetTotals();
+  // Nobody has posted a round yet — ranking an empty field reads as
+  // everyone tied on nothing, which isn't standings.
+  const played = state.cup.players.filter(p => counted[p.id] > 0);
+  const ranked = played.map(p => ({ p, t: totals[p.id] })).sort((a, b) => a.t - b.t);
+  const best = ranked.length ? ranked[0].t : null;
+  const most = played.reduce((m, p) => Math.max(m, counted[p.id]), 0);
+  const rows = ranked.map((row, i) => {
+    const n = counted[row.p.id];
+    const lead = row.t === best && n === most;
     return `<div class="stand-row ${lead ? 'lead' : ''}">
       <span class="rank">${i + 1}</span>
-      <span class="who"><span class="dot ${row.p.team === 'A' ? 'a' : 'b'}"></span>${esc(cupPlayerLabel(row.p))}${row.p.seat ? '<span class="seat-tag">Seat</span>' : ''}</span>
-      <span class="tot">${cupFmt(row.t)}<small>${counted}/6 rounds</small></span>
+      <span class="who"><span class="dot ${row.p.team === 'A' ? 'a' : 'b'}"></span>${esc(cupPlayerLabel(row.p))}${row.p.seat ? '<span class="seat-tag" title="Gary and Elizabeth alternate">G / E</span>' : ''}</span>
+      <span class="tot">${row.t}<small>${cupFmtToPar(toPar[row.p.id])} · ${n}/${cupRoundsScheduled(row.p.id)} round${n === 1 ? '' : 's'}</small></span>
     </div>`;
   }).join('');
+  const waiting = state.cup.players.filter(p => counted[p.id] === 0)
+    .map(p => esc(cupPlayerLabel(p))).join(', ');
+  // Totals only compare like for like. Until everyone is on the same
+  // number of rounds, fewer rounds means a smaller total for no golfing
+  // reason, and the board should say so rather than imply a lead.
+  const uneven = played.some(p => counted[p.id] !== most);
+  document.getElementById('cup-standings').innerHTML = `<h3>Championship standings</h3>`
+    + (rows || `<div class="stand-empty">No completed rounds yet — the first finished card starts the Championship.</div>`)
+    + (uneven ? `<div class="stand-empty">Not everyone is on the same number of rounds yet, so these totals aren't yet like for like.</div>` : '')
+    + (waiting ? `<div class="stand-empty">Yet to post a round: ${waiting}</div>` : '');
 }
 function renderCupSFTable() {
-  const { perRound } = cupSfTotals();
-  const head = `<thead><tr><th class="name">Player</th>` + SF_ROUNDS.map(r => `<th>${r}</th>`).join('') + `<th>Total</th></tr></thead>`;
+  const { totals, toPar, counted, perRound } = cupNetTotals();
+  const head = `<thead><tr><th class="name">Player</th>` + SF_ROUNDS.map(r =>
+    `<th>${r}<small>${esc(COURSE_SHORT[CUP_ROUND_DAYS[r]] || '')}</small></th>`).join('') + `<th>Total</th></tr></thead>`;
   const body = '<tbody>' + state.cup.players.map(p => {
-    let total = 0;
+    const label = cupPlayerLabel(p);
     const cells = SF_ROUNDS.map(rk => {
       const dayId = CUP_ROUND_DAYS[rk];
       const personId = cupResolvedPerson(p.id, dayId);
-      const auto = cupAutoStablefordForPerson(personId, dayId);
-      const pp = perRound[p.id][rk];
-      if (pp !== null) total += pp;
-      if (auto) {
-        return `<td class="auto" data-round="${rk}">${cupFmt(auto.total)}<span class="src">thru ${auto.thru}${auto.thru === 18 ? '' : ' · live'}</span><span class="pp">${pp !== null ? '+' + cupFmt(pp) : ''}</span></td>`;
+      if (!personId) return `<td class="off" data-round="${rk}">—</td>`;
+      const card = cupAutoNetForPerson(personId, dayId);
+      const done = perRound[p.id][rk];
+      // The Seat is two golfers taking turns, so a round of theirs says
+      // whose it was.
+      const whose = p.seat ? `<span class="whose">${esc(getParticipant(personId).name)}</span>` : '';
+      if (card) {
+        // Scored hole by hole. A finished card is the round; an unfinished
+        // one shows where it stands but is explicitly not counting yet.
+        return `<td class="auto" data-round="${rk}">${card.net}<span class="src">${card.thru === 18
+          ? cupFmtToPar(card.toPar)
+          : 'thru ' + card.thru}</span>${whose}</td>`;
       }
-      const raw = (state.cup.stableford[rk] && state.cup.stableford[rk][p.id] != null) ? state.cup.stableford[rk][p.id] : '';
+      const raw = (state.cup.netScores[rk] && state.cup.netScores[rk][p.id] != null) ? state.cup.netScores[rk][p.id] : '';
       return `<td data-round="${rk}">
-        <input type="number" inputmode="numeric" min="0" step="1" value="${raw}" data-round="${rk}" data-player="${p.id}" aria-label="${esc(cupPlayerLabel(p))} ${rk} Stableford">
-        <span class="pp">${pp !== null ? '+' + cupFmt(pp) : ''}</span>
+        <input type="number" inputmode="numeric" min="18" step="1" value="${raw}" data-round="${rk}" data-player="${p.id}" aria-label="${esc(label)} ${rk} net score">
+        <span class="pp">${done ? cupFmtToPar(done.toPar) : ''}</span>${whose}
       </td>`;
     }).join('');
+    const n = counted[p.id];
     return `<tr>
-      <td class="name"><span class="dot" style="background:${p.team === 'A' ? 'var(--green)' : 'var(--rust)'}"></span>${esc(cupPlayerLabel(p))}</td>
-      ${cells}<td class="tot">${cupFmt(total)}</td>
+      <td class="name"><span class="dot" style="background:${p.team === 'A' ? 'var(--green)' : 'var(--rust)'}"></span>${esc(label)}</td>
+      ${cells}<td class="tot">${n ? totals[p.id] : '—'}<small>${n ? cupFmtToPar(toPar[p.id]) + ' · ' + n + '/' + cupRoundsScheduled(p.id) : ''}</small></td>
     </tr>`;
   }).join('') + '</tbody>';
   document.getElementById('cup-sfTable').innerHTML = head + body;
+}
+
+// ============================================================
+// RENDER — one day's card, everybody side by side
+// ============================================================
+// Which round the summary is showing is this phone's business, like the
+// Live Scoring position — nobody wants their screen jumping because
+// somebody else looked up another day.
+function cupDailyDay() {
+  const dayId = state.cupDailyDay || (cupLiveView && cupLiveView.dayId);
+  return CUP_COURSES[dayId] ? dayId : CUP_ROUND_DAYS.R1;
+}
+function cupSetDailyDay(dayId) {
+  state.cupDailyDay = dayId;
+  saveState();
+  renderCupDaily();
+}
+function renderCupDaily() {
+  const mount = document.getElementById('cup-daily');
+  if (!mount) return;
+  const dayId = cupDailyDay();
+  const course = CUP_COURSES[dayId];
+  const picker = Object.values(CUP_ROUND_DAYS).map(d =>
+    `<button class="live-round-btn ${d === dayId ? 'active' : ''}" onclick="cupSetDailyDay('${d}')">${esc(COURSE_SHORT[d] || d)}</button>`).join('');
+
+  // The day's field, plus anyone who somehow has a card without being on
+  // it — better to show a stray score than to hide it. Everyone with a
+  // card sorts by net; the rest sit underneath waiting to tee off.
+  const field = CUP_GOLFER_IDS.map(pid => ({ pid, card: cupAutoNetForPerson(pid, dayId) }))
+    .filter(r => r.card || cupPlaysDay(r.pid, dayId));
+  const rows = field.filter(r => r.card).sort((a, b) => a.card.net - b.card.net || b.card.thru - a.card.thru)
+    .concat(field.filter(r => !r.card));
+
+  const body = rows.length ? rows.map((r, i) => {
+    const name = esc(getParticipant(r.pid).name);
+    if (!r.card) {
+      const ch = cupCourseHandicapFor(r.pid, dayId);
+      return `<tr class="no-card">
+        <td class="pos">–</td><td class="name">${name}</td><td>—</td>
+        <td>${ch == null ? '—' : cupFmtCourseHcp(ch)}</td>
+        <td class="net">—</td><td class="topar">—</td><td class="thru">—</td>
+      </tr>`;
+    }
+    const c = r.card, done = c.thru === 18;
+    return `<tr>
+      <td class="pos">${done ? i + 1 : '–'}</td>
+      <td class="name">${name}</td>
+      <td>${c.gross}</td>
+      <td>${c.ch == null ? '—' : cupFmtCourseHcp(c.ch)}</td>
+      <td class="net">${c.net}</td>
+      <td class="topar ${c.toPar < 0 ? 'under' : c.toPar > 0 ? 'over' : 'level'}">${cupFmtToPar(c.toPar)}</td>
+      <td class="thru">${done ? 'F' : c.thru}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="daily-empty">Nobody is down to play ${esc(course ? course.name : 'this round')}.</td></tr>`;
+
+  mount.innerHTML = `
+    <div class="live-round-picker">${picker}</div>
+    <div class="grid-wrap">
+      <h3>${esc(course ? course.name : '')}${course ? `<small>Par ${course.holes.reduce((s, h) => s + h.parMen, 0)}</small>` : ''}</h3>
+      <table class="sf daily">
+        <thead><tr><th class="pos"></th><th class="name">Player</th><th>Gross</th><th>Hcp</th><th>Net</th><th>To par</th><th>Thru</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
 
 // ============================================================
@@ -1481,18 +1579,18 @@ function cupSetHandicapIndex(pid, val) {
   if (Number.isNaN(parsed)) { renderCupHcpPanel(); return; } // unreadable — put the old value back
   state.cup.golferProfiles[pid].handicapIndex = parsed;
   saveState(); cupSync();
-  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
 }
 function cupSetRatingSet(pid, val) {
   state.cup.golferProfiles[pid].ratingSet = val;
   saveState(); cupSync();
-  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
 }
 function cupSetTeeSelection(dayId, pid, teeId) {
   if (!state.cup.teeSelections[dayId]) state.cup.teeSelections[dayId] = {};
   state.cup.teeSelections[dayId][pid] = teeId;
   saveState(); cupSync();
-  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+  renderCupHcpPanel(); renderCupLivePanel(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
 }
 
 // ============================================================
@@ -1557,7 +1655,7 @@ function cupWriteGross(dayId, pid, hole, value) {
   const v = Math.max(1, value);
   state.cup.holeScores[dayId][pid][hole] = v;
   saveState(); cupSyncLeaf('holeScores', [dayId, pid, hole], v);
-  renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+  renderCupLivePanel(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
 }
 function cupAdjustGross(dayId, pid, hole, delta) {
   const cur = cupHoleScoresFor(pid, dayId)[hole];
@@ -1576,7 +1674,7 @@ function cupClearGross(dayId, pid, hole) {
   if (state.cup.holeScores[dayId] && state.cup.holeScores[dayId][pid]) {
     delete state.cup.holeScores[dayId][pid][hole];
     saveState(); cupSyncLeaf('holeScores', [dayId, pid, hole], null);
-    renderCupLivePanel(); renderCupStandings(); renderCupSFTable();
+    renderCupLivePanel(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
   }
 }
 
@@ -1591,18 +1689,20 @@ function cupSaveStatusText() {
 function cupLiveLeaderboardHtml(dayId) {
   const day = DAYS.find(d => d.id === dayId);
   if (!day || !day.golf) return '';
+  // Net to par rather than net strokes, so someone at the turn and
+  // someone on 16 can still be read against each other.
   const rows = day.golf.golfers.map(pid => {
     const p = getParticipant(pid);
-    const auto = cupAutoStablefordForPerson(pid, dayId);
-    return { p, total: auto ? auto.total : 0, thru: auto ? auto.thru : 0 };
-  }).sort((a, b) => b.total - a.total || b.thru - a.thru);
+    const card = cupAutoNetForPerson(pid, dayId);
+    return { p, card, thru: card ? card.thru : 0 };
+  }).sort((a, b) => (a.card ? a.card.toPar : 99) - (b.card ? b.card.toPar : 99) || b.thru - a.thru);
   return `<div class="live-leaderboard">
     <h3>Today's leaderboard — ${esc(COURSE_SHORT[dayId] || '')}</h3>
     ${rows.map((r, i) => `<div class="llb-row">
-      <span class="rank">${i + 1}</span>
+      <span class="rank">${r.thru ? i + 1 : '–'}</span>
       <span>${esc(r.p.name)}</span>
-      <span class="thru">${r.thru ? ('thru ' + r.thru) : '—'}</span>
-      <span class="pts">${r.thru ? r.total + ' pts' : ''}</span>
+      <span class="thru">${r.thru ? (r.thru === 18 ? 'F' : 'thru ' + r.thru) : '—'}</span>
+      <span class="pts">${r.thru ? cupFmtToPar(r.card.toPar) : ''}</span>
     </div>`).join('')}
   </div>`;
 }
@@ -1758,7 +1858,7 @@ function renderCupLivePanel() {
     const gross = scores[hole];
     const hasGross = gross != null && gross !== '';
     const net = hasGross ? Number(gross) - strokes : null;
-    const pts = net != null ? cupStablefordPoints(par, net) : null;
+    const vsPar = net != null ? net - par : null;
     const dots = strokes > 0 ? '<span class="stroke-dot"></span>'.repeat(Math.min(strokes, 3)) : '';
     // Unentered scores show par, greyed, as a one-tap confirm. Entered
     // scores are solid and tapping clears them back to unentered.
@@ -1775,7 +1875,7 @@ function renderCupLivePanel() {
         ${grossBtn}
         <button type="button" onclick="cupAdjustGross('${dayId}','${pid}',${hole},1)" aria-label="Increase ${esc(p.name)}'s score">+</button>
       </div>
-      <div class="lsr-result">${pts != null ? `<b>${pts} pt${pts === 1 ? '' : 's'}</b>net ${net}` : '<span class="lsr-pending-hint">tap par</span>'}</div>
+      <div class="lsr-result">${vsPar != null ? `<b>net ${net}</b>${cupFmtToPar(vsPar)}` : '<span class="lsr-pending-hint">tap par</span>'}</div>
     </div>`;
   }).join('');
 
@@ -1821,7 +1921,7 @@ function cupSetPlayerTeam(pid, team) {
   const p = state.cup.players.find(x => x.id === pid); if (!p) return;
   p.team = team;
   saveState(); cupSync();
-  renderCupBoard(); renderCupRounds(); renderCupStandings(); renderCupSFTable();
+  renderCupBoard(); renderCupRounds(); renderCupStandings(); renderCupSFTable(); renderCupDaily();
 }
 
 // ============================================================
@@ -1833,6 +1933,7 @@ function renderCupAll() {
   renderCupRounds();
   renderCupStandings();
   renderCupSFTable();
+  renderCupDaily();
   renderCupHcpPanel();
   renderCupLivePanel();
 }
@@ -1855,19 +1956,23 @@ document.getElementById('cup-rounds').addEventListener('click', e => {
 document.getElementById('cup-sfTable').addEventListener('input', e => {
   const inp = e.target.closest('input'); if (!inp) return;
   const rk = inp.dataset.round, pid = inp.dataset.player;
-  if (!state.cup.stableford[rk]) state.cup.stableford[rk] = {};
+  if (!state.cup.netScores[rk]) state.cup.netScores[rk] = {};
   const v = inp.value.trim();
-  if (v === '') delete state.cup.stableford[rk][pid]; else state.cup.stableford[rk][pid] = Number(v);
+  if (v === '') delete state.cup.netScores[rk][pid]; else state.cup.netScores[rk][pid] = Number(v);
   renderCupStandings();
-  const { perRound } = cupSfTotals();
+  // Patch the table in place rather than redrawing it — a redraw would
+  // take the focus out of the box being typed into.
+  const { totals, toPar, counted, perRound } = cupNetTotals();
   document.querySelectorAll('#cup-sfTable tbody tr').forEach((tr, ri) => {
-    const p = state.cup.players[ri]; let total = 0;
+    const p = state.cup.players[ri]; if (!p) return;
     tr.querySelectorAll('td[data-round]').forEach(td => {
-      const pp = perRound[p.id][td.dataset.round];
-      const hint = td.querySelector('.pp'); if (hint) hint.textContent = pp !== null ? ('+' + cupFmt(pp)) : '';
-      if (pp !== null) total += pp;
+      const done = perRound[p.id][td.dataset.round];
+      const hint = td.querySelector('.pp'); if (hint) hint.textContent = done ? cupFmtToPar(done.toPar) : '';
     });
-    const totCell = tr.querySelector('td.tot'); if (totCell) totCell.textContent = cupFmt(total);
+    const totCell = tr.querySelector('td.tot');
+    if (totCell) totCell.innerHTML = counted[p.id]
+      ? `${totals[p.id]}<small>${cupFmtToPar(toPar[p.id])} · ${counted[p.id]}/${cupRoundsScheduled(p.id)}</small>`
+      : '—<small></small>';
   });
   saveState(); cupSync();
 });
@@ -1890,7 +1995,7 @@ document.getElementById('cup-resetBtn').addEventListener('click', () => {
 const CUP_SUBTABS = [['cup-subtab-ryder', 'cup-panel-ryder'], ['cup-subtab-sf', 'cup-panel-sf'], ['cup-subtab-hcp', 'cup-panel-hcp'], ['cup-subtab-live', 'cup-panel-live']];
 const CUP_SUBTAB_RENDER = {
   'cup-subtab-ryder': () => { renderCupBoard(); renderCupRounds(); },
-  'cup-subtab-sf':    () => { renderCupStandings(); renderCupSFTable(); },
+  'cup-subtab-sf':    () => { renderCupStandings(); renderCupSFTable(); renderCupDaily(); },
   'cup-subtab-hcp':   renderCupHcpPanel,
   'cup-subtab-live':  renderCupLivePanel,
 };

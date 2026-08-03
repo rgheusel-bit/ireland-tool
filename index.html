@@ -741,7 +741,7 @@ tr.gt-me-row .gt-day { box-shadow: inset 3px 0 0 var(--brass-2); }
           <div class="eyebrow">Ireland · 2026 · Six rounds</div>
           <h1>The Cup <em>&amp;</em> The Championship</h1>
         </div>
-        <p class="sub">Log each game as it finishes. The Cup and the Stableford board both read off these entries — nothing gets scored twice.</p>
+        <p class="sub">Log each game as it finishes. The Cup and the Championship both read off these entries — nothing gets scored twice.</p>
       </div>
 
       <details class="setup">
@@ -792,12 +792,14 @@ tr.gt-me-row .gt-day { box-shadow: inset 3px 0 0 var(--brass-2); }
       </div>
 
       <div class="cup-panel" id="cup-panel-sf">
-        <p class="sf-note"><b>Keep every card complete.</b> Any hole you don't hole out — a conceded putt or a pick-up in a team game — record your <b>most likely score</b> (net double bogey as the cap) so the Stableford total stays honest. Rounds fill in automatically from Live Scoring once holes are entered; otherwise enter each round's net Stableford total by hand below.</p>
+        <p class="sf-note"><b>Net stroke play — lowest total wins.</b> Add up your six net scores; fewest strokes takes the Championship. Any hole you don't hole out — a conceded putt or a pick-up in a team game — record your <b>most likely score</b>, capped at net double bogey, so the card still adds up. Rounds fill in from Live Scoring as you play and count once all 18 are in; otherwise type a round's net score in below.</p>
         <div class="standings" id="cup-standings"></div>
         <div class="grid-wrap">
-          <h3>Net Stableford by round</h3>
+          <h3>Net score by round</h3>
           <table class="sf" id="cup-sfTable"></table>
         </div>
+        <div class="section-eyebrow" style="margin-top:22px">Daily scores<span class="se-line"></span></div>
+        <div id="cup-daily"></div>
       </div>
 
       <div class="cup-panel" id="cup-panel-hcp">
@@ -1245,6 +1247,9 @@ let state = {
   // a refresh mid-round comes back where you were instead of hole 1, and
   // without dragging anyone else's screen along.
   cupView: null,
+  // Which round the daily score summary is showing. Local only, same
+  // reasoning as cupView.
+  cupDailyDay: null,
   // Score changes sent to the shared copy but not yet echoed back. Local
   // only, and kept on disk so a refresh a second after a change doesn't
   // undo it. See cupSyncLeaf.
