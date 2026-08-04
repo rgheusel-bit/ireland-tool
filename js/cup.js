@@ -404,7 +404,15 @@ function cupHydrate(saved) {
   if (Array.isArray(saved.rounds)) {
     saved.rounds.forEach(sr => {
       const r = out.rounds.find(x => x.id === sr.id); if (!r) return;
-      (sr.items || []).forEach(si => { const it = r.items.find(x => x.id === si.id); if (it) it.state = si.state; });
+      // An unplayed item's state is null, and Firebase doesn't store
+      // nulls — the key simply isn't there when it comes back. Left as
+      // undefined it would be handed straight back on the next write,
+      // which Firebase refuses, and from then on nothing Cup-side syncs
+      // at all.
+      (sr.items || []).forEach(si => {
+        const it = r.items.find(x => x.id === si.id);
+        if (it) it.state = si.state === undefined ? null : si.state;
+      });
     });
   }
   if (saved.golferProfiles) {

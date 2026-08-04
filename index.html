@@ -1461,7 +1461,7 @@ async function syncKey(key, valueOverride) {
   if (!db) return;
   const v = valueOverride !== undefined ? valueOverride : state[key];
   try {
-    await db.ref('ireland2026/' + key).set({ v, by: state.currentUser || '', at });
+    await db.ref('ireland2026/' + key).set(sanitizeForSync({ v, by: state.currentUser || '', at }));
   } catch(e) { reportSyncFailure('write ' + key, e); }
 }
 
@@ -1490,12 +1490,29 @@ function reportSyncFailure(where, err) {
   showToast('⚠️ Scores are saving here but not reaching other phones' + why);
 }
 
+// Firebase rejects a write outright if `undefined` appears anywhere in
+// it, and the whole payload is refused — one stray field stops every
+// score on the phone from reaching anyone. Missing and null already mean
+// the same thing there, so undefined is dropped on the way out rather
+// than being allowed to sink the write.
+function sanitizeForSync(value) {
+  if (value === undefined) return null;
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(v => v === undefined ? null : sanitizeForSync(v));
+  const out = {};
+  Object.keys(value).forEach(k => {
+    if (value[k] === undefined) return;
+    out[k] = sanitizeForSync(value[k]);
+  });
+  return out;
+}
+
 function syncLeaf(path, value) {
   if (!db) return;
   // The "who touched it last" stamp is written after the value, not
   // alongside it. Fired together they race, and the stamp landing first
   // wakes every listener with a snapshot that still shows the old value.
-  db.ref(LIVE_ROOT + '/' + path).set(value === undefined ? null : value)
+  db.ref(LIVE_ROOT + '/' + path).set(sanitizeForSync(value))
     .then(() => {
       syncFailureAnnounced = false;
       setSyncStatus('connected');
